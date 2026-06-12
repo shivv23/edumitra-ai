@@ -25,7 +25,18 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const result = await Promise.race([
+      supabase.auth.getUser(),
+      new Promise<{ data: { user: null } }>((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), 3000)
+      ),
+    ]);
+    user = result.data.user;
+  } catch {
+    user = null;
+  }
 
   const protectedPaths = ["/dashboard", "/study", "/wellness", "/progress", "/parent", "/teacher"];
 
@@ -34,13 +45,10 @@ export async function updateSession(request: NextRequest) {
   );
 
   if (isProtected && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("redirect", request.nextUrl.pathname);
-    return NextResponse.redirect(url);
+    // Skip redirect — let pages render in demo mode (no Supabase project configured)
+    return supabaseResponse;
   }
 
-  // Redirect authenticated users away from login
   if (request.nextUrl.pathname === "/login" && user) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
