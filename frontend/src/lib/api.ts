@@ -8,10 +8,14 @@ class ApiError extends Error {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { "Content-Type": "application/json", ...options?.headers },
+    signal: controller.signal,
     ...options,
   });
+  clearTimeout(timeout);
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: res.statusText }));
     throw new ApiError(res.status, body.detail || "Request failed");
@@ -21,10 +25,14 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 async function upload<T>(path: string, formData: FormData): Promise<T> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
   const res = await fetch(`${API_BASE}${path}`, {
     method: "POST",
     body: formData,
+    signal: controller.signal,
   });
+  clearTimeout(timeout);
   if (!res.ok) {
     const body = await res.json().catch(() => ({ detail: res.statusText }));
     throw new ApiError(res.status, body.detail || "Upload failed");
