@@ -29,11 +29,11 @@ class Settings(BaseSettings):
     sarvam_api_key: str
     sarvam_base_url: str = "https://api.sarvam.ai"
 
-    # WhatsApp
-    whatsapp_access_token: str
-    whatsapp_phone_number_id: str
-    whatsapp_webhook_verify_token: str
-    whatsapp_app_secret: str
+    # WhatsApp (optional — placeholder until Meta verification proceeds)
+    whatsapp_access_token: str = ""
+    whatsapp_phone_number_id: str = ""
+    whatsapp_webhook_verify_token: str = ""
+    whatsapp_app_secret: str = ""
 
     # Storage
     storage_bucket: str = "edumitra-uploads"
