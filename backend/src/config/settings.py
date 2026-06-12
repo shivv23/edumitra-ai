@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     # Backend
     debug: bool = False
     log_level: str = "INFO"
-    allowed_origins: str = "http://localhost:3000"
+    allowed_origins: str = "http://localhost:3000,https://edumitraai.vercel.app"
     rate_limit_per_ip: str = "60/minute"
     rate_limit_per_user: str = "300/hour"
 

@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: edumitraai-api
+    runtime: docker
+    repo: https://github.com/shivv23/edumitra-ai
+    branch: master
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    healthCheckPath: /health
+    envVars:
+      - key: SUPABASE_URL
+        value: https://jevadjgddhcncqanahwz.supabase.co
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_JWKS_URL
+        value: https://jevadjgddhcncqanahwz.supabase.co/.well-known/jwks.json
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        value: https://jevadjgddhcncqanahwz.supabase.co
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: NEXT_PUBLIC_API_URL
+        value: https://edumitraai-api.onrender.com
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: CLAUDE_API_KEY
+        sync: false
+      - key: STABLE_DIFFUSION_API_KEY
+        sync: false
+      - key: SARVAM_API_KEY
+        sync: false
+      - key: LANGCHAIN_API_KEY
+        sync: false
+      - key: LANGCHAIN_TRACING_V2
+        value: "true"
+      - key: LANGCHAIN_PROJECT
+        value: edumitra-ai
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: DEBUG
+        value: "false"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: ALLOWED_ORIGINS
+        value: https://edumitraai.vercel.app
+      - key: CHROMA_DB_PATH
+        value: /app/agents/rag/chroma_db
