@@ -28,14 +28,32 @@ export async function createSupabaseServerClient() {
   );
 }
 
+const TIMEOUT_MS = 3000;
+
+async function withTimeout<T>(fn: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    const result = await Promise.race([
+      fn(),
+      new Promise<T>((_, reject) => setTimeout(() => reject(new Error("timeout")), TIMEOUT_MS)),
+    ]);
+    return result;
+  } catch {
+    return fallback;
+  }
+}
+
 export async function getSession() {
-  const supabase = await createSupabaseServerClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  return session;
+  return withTimeout(async () => {
+    const supabase = await createSupabaseServerClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    return session;
+  }, null);
 }
 
 export async function getCurrentUser() {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  return user;
+  return withTimeout(async () => {
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    return user;
+  }, null);
 }
