@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { getSession, getCurrentUser } from "@/lib/supabase/browser";
 import Navbar from "@/components/Navbar";
 import { ChatInterface } from "@/components/ChatInterface";
@@ -11,7 +10,6 @@ import { QuizCard } from "@/components/QuizCard";
 import { SUPPORTED_LANGUAGES } from "@/types";
 
 export default function StudyPage() {
-  const router = useRouter();
   const [session, setSession] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [showUpload, setShowUpload] = useState(false);
@@ -24,14 +22,15 @@ export default function StudyPage() {
   useEffect(() => {
     async function load() {
       const s = await getSession();
-      if (!s) { router.push("/login"); return; }
-      setSession(s);
-      setUser(s.user);
+      if (s) {
+        setSession(s);
+        setUser(s.user);
+        getCurrentUser().then(u => { if (u) setUser(u); }).catch(() => {});
+      }
       setReady(true);
-      getCurrentUser().then(u => { if (u) setUser(u); }).catch(() => {});
     }
     load();
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

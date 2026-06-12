@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { getSession, getCurrentUser } from "@/lib/supabase/browser";
 import Navbar from "@/components/Navbar";
 import { fetchStudents } from "@/lib/api";
@@ -19,7 +18,6 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function TeacherDashboard() {
-  const router = useRouter();
   const [session, setSession] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [data, setData] = useState<any>(null);
@@ -30,10 +28,11 @@ export default function TeacherDashboard() {
     setLoading(true);
     setError(null);
     const s = await getSession();
-    if (!s) { router.push("/login"); return; }
-    setSession(s);
-    setUser(s.user);
-    getCurrentUser().then(u => { if (u) setUser(u); }).catch(() => {});
+    if (s) {
+      setSession(s);
+      setUser(s.user);
+      getCurrentUser().then(u => { if (u) setUser(u); }).catch(() => {});
+    }
     try {
       const d = await fetchStudents();
       setData(d);

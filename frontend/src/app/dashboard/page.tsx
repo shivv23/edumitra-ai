@@ -24,9 +24,7 @@ async function getDashboardData() {
 
 export default async function DashboardPage() {
   const session = await getSession();
-  if (!session) redirect("/login");
-
-  const user = await getCurrentUser();
+  const user = session ? await getCurrentUser() : null;
   const userName = user?.user_metadata?.name || user?.email?.split("@")[0] || "Student";
   const userRole = user?.user_metadata?.role || "student";
   const data = await getDashboardData();

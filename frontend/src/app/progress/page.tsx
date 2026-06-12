@@ -19,10 +19,11 @@ export default function ProgressPage() {
     setLoading(true);
     setError(null);
     const s = await getSession();
-    if (!s) { router.push("/login"); return; }
-    setSession(s);
-    setUser(s.user);
-    getCurrentUser().then(u => { if (u) setUser(u); }).catch(() => {});
+    if (s) {
+      setSession(s);
+      setUser(s.user);
+      getCurrentUser().then(u => { if (u) setUser(u); }).catch(() => {});
+    }
     try {
       const d = await fetchProgress();
       setData(d);

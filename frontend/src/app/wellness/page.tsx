@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { getSession, getCurrentUser } from "@/lib/supabase/browser";
 import Navbar from "@/components/Navbar";
 import { WellnessCheckInCard } from "@/components/WellnessCard";
@@ -19,7 +18,6 @@ const HELPLINES = [
 ];
 
 export default function WellnessPage() {
-  const router = useRouter();
   const [session, setSession] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [breathingOpen, setBreathingOpen] = useState(false);
@@ -31,10 +29,11 @@ export default function WellnessPage() {
   useEffect(() => {
     async function load() {
       const s = await getSession();
-      if (!s) { router.push("/login"); return; }
-      setSession(s);
-      setUser(s.user);
-      getCurrentUser().then(u => { if (u) setUser(u); }).catch(() => {});
+      if (s) {
+        setSession(s);
+        setUser(s.user);
+        getCurrentUser().then(u => { if (u) setUser(u); }).catch(() => {});
+      }
       try {
         const data = await fetchWellnessHistory();
         if (data?.checkins) {
@@ -48,7 +47,7 @@ export default function WellnessPage() {
       }
     }
     load();
-  }, [router]);
+  }, []);
 
   const userName = user?.user_metadata?.name || "Student";
   const userRole = user?.user_metadata?.role || "student";
