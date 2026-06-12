@@ -19,7 +19,10 @@ from src.db import (
     get_recent_alerts,
 )
 from src.schemas.common import Language, StudyQuery
-from agents.llm import get_gemini_client
+try:
+    from agents.llm import get_gemini_client
+except ImportError:
+    get_gemini_client = None
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +93,8 @@ _CHAT_SYSTEM_PROMPT = (
 
 async def _gemini_chat(message: str, history: Optional[List[Dict[str, str]]] = None) -> str:
     try:
+        if get_gemini_client is None:
+            raise ImportError("agents module not available")
         client = get_gemini_client()
         contents = []
         if history:
