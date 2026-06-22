@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { fetchChildProgress, setAuthToken } from "@/lib/api";
 import { masteryColor } from "@/lib/utils";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getStoredToken, getStoredUser } from "@/lib/auth";
 
 export default function ParentDashboard() {
   const router = useRouter();
@@ -16,19 +16,11 @@ export default function ParentDashboard() {
   const [user, setUser] = useState<{ name: string; role: string } | null>(null);
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        router.push("/login");
-        return;
-      }
-      setAuthToken(session.access_token);
-      const meta = session.user?.user_metadata;
-      setUser({
-        name: (meta?.name as string) || session.user?.email?.split("@")[0] || "Parent",
-        role: (meta?.role as string) || "parent",
-      });
-    });
+    const token = getStoredToken();
+    const user = getStoredUser();
+    if (!token || !user) { router.push("/login"); return; }
+    setAuthToken(token);
+    setUser({ name: user.name, role: user.role });
   }, [router]);
 
   async function load() {

@@ -8,7 +8,7 @@ import { Modal } from "@/components/Modal";
 import { BreathingExercise } from "@/components/BreathingExercise";
 import { QuickJournal } from "@/components/QuickJournal";
 import { fetchWellnessHistory, setAuthToken } from "@/lib/api";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getStoredToken, getStoredUser } from "@/lib/auth";
 
 const HELPLINES = [
   { name: "iCall Helpline", phone: "9152987821", desc: "Mental health support" },
@@ -28,19 +28,11 @@ export default function WellnessPage() {
   const [user, setUser] = useState<{ name: string; role: string } | null>(null);
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        router.push("/login");
-        return;
-      }
-      setAuthToken(session.access_token);
-      const meta = session.user?.user_metadata;
-      setUser({
-        name: (meta?.name as string) || session.user?.email?.split("@")[0] || "Student",
-        role: (meta?.role as string) || "student",
-      });
-    });
+    const token = getStoredToken();
+    const user = getStoredUser();
+    if (!token || !user) { router.push("/login"); return; }
+    setAuthToken(token);
+    setUser({ name: user.name, role: user.role });
   }, [router]);
 
   useEffect(() => {

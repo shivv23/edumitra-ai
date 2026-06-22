@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { fetchProgress, setAuthToken } from "@/lib/api";
 import { masteryColor, masteryLabel } from "@/lib/utils";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getStoredToken, getStoredUser } from "@/lib/auth";
 
 export default function ProgressPage() {
   const router = useRouter();
@@ -16,19 +16,11 @@ export default function ProgressPage() {
   const [user, setUser] = useState<{ name: string; role: string } | null>(null);
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        router.push("/login");
-        return;
-      }
-      setAuthToken(session.access_token);
-      const meta = session.user?.user_metadata;
-      setUser({
-        name: (meta?.name as string) || session.user?.email?.split("@")[0] || "Student",
-        role: (meta?.role as string) || "student",
-      });
-    });
+    const token = getStoredToken();
+    const user = getStoredUser();
+    if (!token || !user) { router.push("/login"); return; }
+    setAuthToken(token);
+    setUser({ name: user.name, role: user.role });
   }, [router]);
 
   async function load() {

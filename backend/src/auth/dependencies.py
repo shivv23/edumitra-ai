@@ -15,6 +15,9 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 JWKS_CACHE = None
 
+CUSTOM_ALGORITHM = "HS256"
+CUSTOM_JWT_ISSUER = "edumitra-ai"
+
 
 async def get_jwks() -> dict | None:
     global JWKS_CACHE
@@ -25,15 +28,22 @@ async def get_jwks() -> dict | None:
                 resp.raise_for_status()
                 JWKS_CACHE = resp.json()
         except Exception as e:
-            logger.warning("JWKS fetch failed (demo mode): %s", e)
+            logger.warning("JWKS fetch failed: %s", e)
             JWKS_CACHE = {}
     return JWKS_CACHE or {}
 
 
 async def verify_jwt(token: str) -> dict | None:
+    """Try custom JWT first, then fall back to Supabase JWKS."""
+    try:
+        payload = jwt.decode(token, settings.encryption_key, algorithms=[CUSTOM_ALGORITHM])
+        logger.info("Custom JWT verified for user %s", payload.get("sub", "unknown"))
+        return _custom_payload_to_supabase_format(payload)
+    except JWTError:
+        pass
+
     jwks = await get_jwks()
     if not jwks.get("keys"):
-        logger.info("No JWKS keys available — returning demo user")
         return None
     try:
         unverified_header = jwt.get_unverified_header(token)
@@ -58,12 +68,30 @@ async def verify_jwt(token: str) -> dict | None:
         return None
 
 
+def _custom_payload_to_supabase_format(payload: dict) -> dict:
+    return {
+        "sub": payload.get("sub"),
+        "email": payload.get("email", ""),
+        "role": "authenticated",
+        "user_metadata": {
+            "name": payload.get("name", "User"),
+            "role": payload.get("role", "student"),
+        },
+    }
+
+
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> dict:
     if credentials is None:
-        return {"sub": str(uuid.uuid4()), "user_metadata": {"role": "student", "name": "Demo Student"}}
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
     payload = await verify_jwt(credentials.credentials)
     if payload is None:
-        return {"sub": str(uuid.uuid4()), "user_metadata": {"role": "student", "name": "Demo Student"}}
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
     return payload
 
 

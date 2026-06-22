@@ -15,6 +15,7 @@ if str(_hackarena) not in sys.path:
     sys.path.insert(0, str(_hackarena))
 
 from src.routes.api import router as api_router
+from src.auth.routes import router as auth_router
 
 
 @asynccontextmanager
@@ -58,6 +59,7 @@ app = FastAPI(
 configure_security_middleware(app)
 configure_logging()
 
+app.include_router(auth_router)
 app.include_router(whatsapp_router)
 app.include_router(data_protection_router)
 app.include_router(api_router)

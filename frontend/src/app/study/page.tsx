@@ -9,7 +9,7 @@ import { VoiceRecorder } from "@/components/VoiceRecorder";
 import { QuizCard } from "@/components/QuizCard";
 import { SUPPORTED_LANGUAGES } from "@/types";
 import { setAuthToken } from "@/lib/api";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { getStoredToken, getStoredUser } from "@/lib/auth";
 
 export default function StudyPage() {
   const router = useRouter();
@@ -22,20 +22,12 @@ export default function StudyPage() {
   const [user, setUser] = useState<{ name: string; role: string } | null>(null);
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        router.push("/login");
-        return;
-      }
-      setAuthToken(session.access_token);
-      const meta = session.user?.user_metadata;
-      setUser({
-        name: (meta?.name as string) || session.user?.email?.split("@")[0] || "Student",
-        role: (meta?.role as string) || "student",
-      });
-      setReady(true);
-    });
+    const token = getStoredToken();
+    const user = getStoredUser();
+    if (!token || !user) { router.push("/login"); return; }
+    setAuthToken(token);
+    setUser({ name: user.name, role: user.role });
+    setReady(true);
   }, [router]);
 
   useEffect(() => {

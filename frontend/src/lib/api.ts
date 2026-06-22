@@ -1,10 +1,16 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-// Store auth token from browser Supabase session
 let _authToken: string | null = null;
 
 export function setAuthToken(token: string | null) {
   _authToken = token;
+  if (typeof document !== "undefined") {
+    if (token) {
+      document.cookie = `edumitra_token=${token}; path=/; max-age=2592000; SameSite=Lax`;
+    } else {
+      document.cookie = "edumitra_token=; path=/; max-age=0";
+    }
+  }
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {

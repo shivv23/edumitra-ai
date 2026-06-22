@@ -2,8 +2,8 @@
 
 import { useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { setAuthToken } from "@/lib/api";
+import { signIn, signUp, setAuthToken } from "@/lib/api";
+import { signIn as authSignIn, signUp as authSignUp } from "@/lib/auth";
 
 function LoginFormInner() {
   const router = useRouter();
@@ -21,10 +21,8 @@ function LoginFormInner() {
     setError("");
     setLoading(true);
     try {
-      const supabase = createSupabaseBrowserClient();
-      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
-      if (authError) throw new Error(authError.message);
-      if (data.session?.access_token) setAuthToken(data.session.access_token);
+      const { token } = await authSignIn(email, password);
+      setAuthToken(token);
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message);
@@ -38,14 +36,10 @@ function LoginFormInner() {
     setError("");
     setLoading(true);
     try {
-      const supabase = createSupabaseBrowserClient();
-      const { error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { name, role } },
-      });
-      if (authError) throw new Error(authError.message);
-      setSuccess("Check your email for the confirmation link.");
+      const { token } = await authSignUp(email, password, name, role);
+      setAuthToken(token);
+      setSuccess("Account created! Redirecting...");
+      setTimeout(() => router.push("/dashboard"), 1000);
     } catch (err: any) {
       setError(err.message);
     } finally {
