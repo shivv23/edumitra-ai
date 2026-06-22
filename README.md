@@ -1,55 +1,63 @@
 # EduMitra AI
 
-**Team:** shivamkumar0423  
-**Live:** https://edumitraai.vercel.app  
+**Team:** shivamkumar0423 · **Live:** https://edumitraai.vercel.app
 
-An AI tutor + wellness check-in for Indian students grades 6–12. Built around NCERT curriculum, works in 11 Indian languages, and complies with DPDP Act 2023.
+An AI tutor and wellness companion for Indian students grades 6–12. NCERT-aligned, works in 11 Indian languages, compliant with DPDP Act 2023.
 
 ---
 
-## Innovation & Creativity (25%)
+## Overview
 
-- **Multi-agent architecture, not a single LLM call.** LangGraph routes intent to specialized agents (learning, wellness, voice, progress). Each has its own model, prompt, and fallback chain. If Claude rate-limits, Gemini takes over. No single point of LLM failure.
-- **Wellness triage is deterministic.** No AI diagnoses or prescriptions. A keyword classifier flags crisis signals and offers helpline numbers. The LLM never touches mental health decisions.
-- **Voice-native for Indian languages.** Web Speech API handles STT client-side (free, works offline). Sarvam AI is backend fallback. No English dependency.
-- **Prompt injection defense** on every user input before it reaches any LLM. Not just a system prompt — actual sanitization logic.
+```
+frontend/          — Next.js 14 (App Router), Tailwind, TypeScript
+backend/           — FastAPI (Python 3.12), Supabase, httpx
+agents/            — LangGraph supervisor + specialized agents
+├── langgraph/     — Graph orchestration, sanitizer, circuit breaker, guardrails
+├── content_gen/   — Explanations, quizzes, mind maps, image gen (Stable Diffusion)
+├── rag/           — ChromaDB vector store + curriculum retrieval
+├── bhasha/        — Sarvam AI STT/TTS for 11 Indian languages
+├── wellness/      — Crisis classifier + check-in processing
+├── progress/      — Mastery tracking, burnout risk, alert dispatch
+└── multimodal/    — Image upload validation + vision analysis
+```
 
-## Technical Implementation (25%)
+## What makes it different
 
-- **Frontend:** Next.js 14 App Router, TypeScript, Tailwind. 11 routes, 16 components. Deployed on Vercel.
-- **Backend:** FastAPI, 18 REST endpoints, async throughout. Deployed on Railway via Docker.
-- **Auth:** Supabase SSR (email/password), middleware guards every protected route, JWT forwarded to backend.
-- **RAG:** ChromaDB with all-MiniLM-L6-v2 embeddings, 29+ NCERT chunks seeded, 0.65 relevance threshold.
-- **Orchestration:** LangGraph supervisor with circuit breaker (3 failures = open, 30s timeout per node), 6 agent node types.
-- **Tests:** 15 test files covering sanitizer, circuit breaker, crisis detection, XSS, RAG ingestion, file upload, webhook security, RLS isolation, encryption, red-team.
-- **CI/CD:** GitHub Actions (lint → test → build), Dependabot for pip/npm, pre-commit hooks (gitleaks, bandit, ruff).
+Most edtech platforms do one thing: serve content. EduMitra connects learning with wellness in a single flow. The architecture uses multiple specialized AI agents instead of one monolithic model — each agent has its own model, prompt, and fallback chain. If Claude rate-limits, Gemini takes over. There's no single point of LLM failure.
 
-## Problem-Solving Approach (20%)
+The wellness agent never uses AI for diagnosis or prescriptions. It runs a deterministic keyword classifier to detect crisis signals and shows helpline numbers. The LLM never touches mental health decisions.
 
-The problem: 250M+ Indian students across CBSE/state boards, with no personalized learning adaptation. 53% report anxiety. Existing platforms handle academics OR wellness, never both. Most ignore DPDP Act compliance.
+Voice works in 11 Indian languages through the browser's Web Speech API (free, works offline) with Sarvam AI as a backend fallback. No dependency on English.
 
-The approach:
-- **RAG over NCERT,** not generic web data. Answers stay syllabus-aligned.
-- **Adaptive difficulty** — quiz performance feeds back into content selection. Weak areas get more practice.
-- **Wellness integrated into the same flow**, not a separate app. Student checks mood, gets immediate support if needed, but academics continue uninterrupted.
-- **DPDP compliance built in from day one** — erasure endpoint, export, encryption at rest, parental consent gate. Not retrofitted.
+Every user input goes through a prompt injection sanitizer before reaching any LLM — not just a system prompt, actual sanitization logic.
 
-## User Experience & Design (15%)
+## What's built
 
-- Dark glassmorphism theme, gradient accents, animated transitions. Consistent across all 9 pages.
-- Every button has hover/active feedback. Loading states on every data fetch. Error states with retry buttons.
-- Voice mode with language selector (11 Indian languages) built into the study page.
-- Wellness helped by real Indian helpline numbers (iCall, Vandrevala, KIRAN, AASRA, Childline).
-- Breathing exercise and quick journal tools accessible from the wellness page without leaving the app.
+**Frontend** — Next.js 14 App Router, TypeScript, Tailwind. 9 routes, 16 components. Deployed on Vercel. Dark glassmorphism theme with gradient accents. Every button has hover and active feedback. Loading and error states on every data fetch with retry buttons. Voice mode with language selector built into the study page. Real Indian helpline numbers (iCall, Vandrevala, KIRAN, AASRA, Childline) displayed in the wellness section.
 
-## Scalability & Impact (15%)
+**Backend** — FastAPI, 18 REST endpoints, async throughout. Deployed on Railway via Docker. Supabase SSR auth with email/password. Middleware guards every protected route. JWT forwarded from frontend to backend for authenticated API calls.
 
-- **Stateless backend** — all agents are stateless functions. Scale horizontally behind Railway's load balancer.
-- **ChromaDB is persistent and local.** No cloud vector DB dependency. Works offline, no per-query cost.
-- **Browser-side STT** for voice — zero server cost per transcription. Sarvam API only used as fallback.
-- **LLM cost control** — Claude primary for quality, Gemini fallback for cost. Circuit breaker prevents runaway API calls.
-- **DPDP Act 2023** compliance means it can actually be deployed in Indian schools without legal issues.
-- **250M addressable users.** No per-user infrastructure cost beyond the database row. RAG scales with index size, not user count.
+**RAG pipeline** — ChromaDB vector store with all-MiniLM-L6-v2 embeddings. 29+ NCERT chunks seeded across 5 subjects. 0.65 relevance threshold. Retrieval happens before every LLM call to ground answers in curriculum content.
+
+**Agent orchestration** — LangGraph supervisor with circuit breaker (3 failures opens the circuit, 30-second timeout per node). 6 agent types: curriculum RAG, content generation, voice, wellness, progress tracking, multimodal. Each wrapped with timeout and retry logic.
+
+**Tests** — 15 test files covering sanitizer, circuit breaker, crisis detection, XSS, RAG ingestion, file upload validation, webhook security, RLS isolation, encryption, and red-team testing.
+
+**CI/CD** — GitHub Actions (lint → test → build). Dependabot for pip and npm. Pre-commit hooks (gitleaks, bandit, ruff, trailing whitespace, YAML/JSON validation).
+
+## The problem it solves
+
+250 million Indian students across CBSE and state board curricula. No personalized learning adaptation — every student gets the same content regardless of their pace or gaps. 53% of Indian students report anxiety, but wellness support lives in completely separate apps (if it exists at all). Most platforms treat DPDP Act compliance as an afterthought.
+
+EduMitra uses RAG over NCERT textbooks, not generic web data, so answers stay syllabus-aligned. Quiz performance feeds back into content selection — weak areas get more practice, strong areas move faster. Wellness is part of the same flow, not a separate app. A student checks their mood, gets immediate support if needed, and goes back to studying.
+
+DPDP Act compliance was built in from the start — erasure endpoint, data export, encryption at rest, parental consent gate for minors.
+
+## Scale and cost
+
+The backend is stateless — every agent is a stateless function. Scale horizontally behind a load balancer. ChromaDB is persistent and local, no cloud vector DB dependency, no per-query cost. Browser-side STT means zero server cost for voice transcription — the Sarvam API only runs as a fallback. Claude is the primary LLM for content quality, Gemini handles fallback when cost matters. The circuit breaker prevents runaway API calls from a single buggy request.
+
+250 million addressable users. No per-user infrastructure cost beyond a database row. RAG scales with index size, not user count.
 
 ---
 
