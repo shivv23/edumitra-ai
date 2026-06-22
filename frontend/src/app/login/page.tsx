@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { signIn, signUp, setAuthToken } from "@/lib/api";
+import { setAuthToken } from "@/lib/api";
 import { signIn as authSignIn, signUp as authSignUp } from "@/lib/auth";
 
 function LoginFormInner() {
