@@ -38,3 +38,4 @@ agents/rag/chroma_db/
 
 # Logs
 *.log
+*.~*
