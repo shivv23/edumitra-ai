@@ -1,11 +1,11 @@
 services:
   - type: web
     name: edumitraai-api
-    runtime: docker
+    runtime: python
     repo: https://github.com/shivv23/edumitra-ai
     branch: master
-    dockerfilePath: backend/Dockerfile
-    dockerContext: backend
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn src.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: SUPABASE_URL
@@ -15,7 +15,7 @@ services:
       - key: SUPABASE_ANON_KEY
         sync: false
       - key: SUPABASE_JWKS_URL
-        value: https://jevadjgddhcncqanahwz.supabase.co/.well-known/jwks.json
+        value: https://jevadjgddhcncqanahwz.supabase.co/auth/v1/.well-known/jwks.json
       - key: NEXT_PUBLIC_SUPABASE_URL
         value: https://jevadjgddhcncqanahwz.supabase.co
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -44,5 +44,3 @@ services:
         value: INFO
       - key: ALLOWED_ORIGINS
         value: https://edumitraai.vercel.app
-      - key: CHROMA_DB_PATH
-        value: /app/agents/rag/chroma_db
