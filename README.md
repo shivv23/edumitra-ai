@@ -4,13 +4,40 @@
 
 An AI tutor and wellness companion for Indian students grades 6–12. NCERT-aligned, works in 11 Indian languages, compliant with DPDP Act 2023.
 
+> ⚠️ **Backend Availability:** The backend is served via Cloudflare Tunnel from the developer's local machine. Judges should coordinate a scheduled demo time. See [Backend Access](#backend-access) below.
+
+---
+
+## Backend Access
+
+The backend runs on the developer's machine via Cloudflare Tunnel for the hackathon demo. This avoids paid cloud hosting.
+
+**For judges:** Please coordinate a demo time with the team so the backend is running. The frontend at [edumitraai.vercel.app](https://edumitraai.vercel.app) is always available.
+
+**To start the backend locally:**
+```bash
+# Terminal 1 — Start the server
+cd backend
+python -m venv venv
+venv\Scripts\activate    # Windows
+pip install -r requirements.txt
+uvicorn src.main:app --host 0.0.0.0 --port 8000
+
+# Terminal 2 — Expose via Cloudflare Tunnel
+# Install from: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+cloudflared tunnel --url http://localhost:8000
+
+# Copy the generated URL (e.g., https://something.trycloudflare.com)
+# and set it as NEXT_PUBLIC_API_URL in Vercel env vars.
+```
+
 ---
 
 ## Overview
 
 ```
 frontend/          — Next.js 14 (App Router), Tailwind, TypeScript
-backend/           — FastAPI (Python 3.12), Supabase, httpx
+backend/           — FastAPI (Python 3.12), httpx, python-jose
 agents/            — LangGraph supervisor + specialized agents
 ├── langgraph/     — Graph orchestration, sanitizer, circuit breaker, guardrails
 ├── content_gen/   — Explanations, quizzes, mind maps, image gen (Stable Diffusion)
@@ -35,7 +62,7 @@ Every user input goes through a prompt injection sanitizer before reaching any L
 
 **Frontend** — Next.js 14 App Router, TypeScript, Tailwind. 9 routes, 16 components. Deployed on Vercel. Dark glassmorphism theme with gradient accents. Every button has hover and active feedback. Loading and error states on every data fetch with retry buttons. Voice mode with language selector built into the study page. Real Indian helpline numbers (iCall, Vandrevala, KIRAN, AASRA, Childline) displayed in the wellness section.
 
-**Backend** — FastAPI, 18 REST endpoints, async throughout. Deployed on Railway via Docker. Supabase SSR auth with email/password. Middleware guards every protected route. JWT forwarded from frontend to backend for authenticated API calls.
+**Backend** — FastAPI, 18 REST endpoints, async throughout. Runs locally via uvicorn, exposed publicly via Cloudflare Tunnel. Self-contained JWT auth (no Supabase dependency). Middleware guards every protected route. JWT forwarded from frontend to backend for authenticated API calls.
 
 **RAG pipeline** — ChromaDB vector store with all-MiniLM-L6-v2 embeddings. 29+ NCERT chunks seeded across 5 subjects. 0.65 relevance threshold. Retrieval happens before every LLM call to ground answers in curriculum content.
 
@@ -65,7 +92,6 @@ The backend is stateless — every agent is a stateless function. Scale horizont
 
 ### Prerequisites
 - Python 3.12+, Node.js 18+
-- Supabase project (free tier works)
 - API keys: Gemini, Claude, Sarvam AI, Stability AI, LangChain
 
 ### Backend
@@ -74,8 +100,16 @@ cd backend
 python -m venv venv
 venv\Scripts\activate    # Windows
 pip install -r requirements.txt
-cp ../.env.example ../.env  # Fill in your keys
+copy ..\.env.example ..\.env  # Fill in your keys
 uvicorn src.main:app --reload --port 8000
+```
+
+> ⚠️ The backend uses self-contained JWT auth (no Supabase). Users are stored in `backend/src/auth/users.json`. Sign up at `/api/auth/signup` or via the login page.
+
+### Expose Backend (for demo)
+```bash
+# Install Cloudflare Tunnel from: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+cloudflared tunnel --url http://localhost:8000
 ```
 
 ### Frontend
@@ -95,7 +129,7 @@ npm run dev
 | `SARVAM_API_KEY` | dashboard.sarvam.ai | Voice STT/TTS in 11 Indian languages |
 | `STABLE_DIFFUSION_API_KEY` | platform.stability.ai | Image generation |
 | `LANGCHAIN_API_KEY` | smith.langchain.com | LangSmith tracing |
-| `SUPABASE_*` | supabase.com | Database, auth, storage |
+| `SUPABASE_*` | supabase.com | Optional — only if using Supabase features (self-contained JWT auth works without it) |
 
 ## API Endpoints
 
