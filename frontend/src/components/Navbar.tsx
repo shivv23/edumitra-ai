@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "@/app/login/actions";
+import { signOut } from "@/lib/auth";
 import { useState, useEffect, useRef } from "react";
 import { Logo } from "./Logo";
 
