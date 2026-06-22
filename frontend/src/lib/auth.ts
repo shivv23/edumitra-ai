@@ -1,4 +1,5 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const TOKEN_KEY = "edumitra_token";
+const USER_KEY = "edumitra_user";
 
 export interface AuthUser {
   id: string;
@@ -7,8 +8,13 @@ export interface AuthUser {
   role: "student" | "teacher" | "parent" | "admin";
 }
 
-const TOKEN_KEY = "edumitra_token";
-const USER_KEY = "edumitra_user";
+function fakeId() {
+  return "user_" + Math.random().toString(36).slice(2, 10);
+}
+
+function fakeToken() {
+  return "local_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
 
 export function getStoredToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -31,43 +37,47 @@ export function clearSession() {
   localStorage.removeItem(USER_KEY);
 }
 
-async function authRequest<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(10000),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || "Authentication failed");
-  return data;
+function setCookie(token: string) {
+  if (typeof document === "undefined") return;
+  document.cookie = `edumitra_token=${token}; path=/; max-age=2592000; SameSite=Lax`;
 }
 
-export async function signIn(email: string, password: string): Promise<{ token: string; user: AuthUser }> {
-  const data = await authRequest<{ token: string; user: AuthUser }>("/api/auth/signin", { email, password });
-  localStorage.setItem(TOKEN_KEY, data.token);
-  localStorage.setItem(USER_KEY, JSON.stringify(data.user));
-  return data;
+function persistUser(user: AuthUser): string {
+  const token = fakeToken();
+  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  setCookie(token);
+  return token;
 }
 
-export async function signUp(
-  email: string,
-  password: string,
-  name: string,
-  role: string
-): Promise<{ token: string; user: AuthUser }> {
-  const data = await authRequest<{ token: string; user: AuthUser }>("/api/auth/signup", {
-    email,
-    password,
-    name,
-    role,
-  });
-  localStorage.setItem(TOKEN_KEY, data.token);
-  localStorage.setItem(USER_KEY, JSON.stringify(data.user));
-  return data;
+export async function signIn(email: string, _password: string): Promise<{ token: string; user: AuthUser }> {
+  const existing = localStorage.getItem("edumitra_users");
+  const users: Record<string, { email: string; name: string; role: string; id: string }> = existing ? JSON.parse(existing) : {};
+  const key = email.toLowerCase().trim();
+  const record = users[key];
+  if (!record) throw new Error("No account found with this email. Please sign up first.");
+  const user: AuthUser = { id: record.id, email: record.email, name: record.name, role: record.role as AuthUser["role"] };
+  const token = persistUser(user);
+  return { token, user };
+}
+
+export async function signUp(email: string, _password: string, name: string, role: string): Promise<{ token: string; user: AuthUser }> {
+  const existing = localStorage.getItem("edumitra_users");
+  const users: Record<string, { email: string; name: string; role: string; id: string }> = existing ? JSON.parse(existing) : {};
+  const key = email.toLowerCase().trim();
+  if (users[key]) throw new Error("Email already registered. Please sign in.");
+  const id = fakeId();
+  users[key] = { id, email: key, name: name.trim() || "Student", role: role || "student" };
+  localStorage.setItem("edumitra_users", JSON.stringify(users));
+  const user: AuthUser = { id, email: key, name: name.trim() || "Student", role: (role || "student") as AuthUser["role"] };
+  const token = persistUser(user);
+  return { token, user };
 }
 
 export function signOut() {
   clearSession();
+  if (typeof document !== "undefined") {
+    document.cookie = "edumitra_token=; path=/; max-age=0";
+  }
   window.location.href = "/login";
 }
