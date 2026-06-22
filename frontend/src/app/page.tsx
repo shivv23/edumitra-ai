@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { getSession } from "@/lib/supabase/client";
 
 const FEATURES = [
   { icon: "📚", title: "Personalized Learning", desc: "AI creates adaptive study plans from your syllabus and performance, tailored just for you.", href: "/study", color: "from-primary-500/20 to-accent-500/5" },
@@ -17,8 +16,6 @@ const STATS = [
 ];
 
 export default async function LandingPage() {
-  const session = await getSession();
-
   return (
     <div className="relative min-h-screen overflow-hidden">
       <div className="fixed inset-0 bg-gradient-to-br from-surface-950 via-surface-900 to-surface-950" />
@@ -43,14 +40,8 @@ export default async function LandingPage() {
             </span>
           </span>
           <div className="flex items-center gap-4">
-            {session ? (
-              <Link href="/dashboard" className="btn-primary text-sm glow">Dashboard</Link>
-            ) : (
-              <>
-                <Link href="/login" className="btn-ghost text-sm">Sign In</Link>
-                <Link href="/login?tab=signup" className="btn-primary text-sm glow">Get Started Free</Link>
-              </>
-            )}
+            <Link href="/dashboard" className="btn-primary text-sm glow">Dashboard</Link>
+            <Link href="/login" className="btn-ghost text-sm">Sign In</Link>
           </div>
         </div>
       </nav>
@@ -74,15 +65,9 @@ export default async function LandingPage() {
           </p>
 
           <div className="flex items-center gap-4 flex-wrap justify-center">
-            {session ? (
-              <Link href="/dashboard" className="btn-primary text-lg px-8 py-4 glow">
-                <span className="flex items-center gap-2">Go to Dashboard <span>→</span></span>
-              </Link>
-            ) : (
-              <Link href="/login?tab=signup" className="btn-primary text-lg px-8 py-4 glow">
-                <span className="flex items-center gap-2">Start Learning Free <span>→</span></span>
-              </Link>
-            )}
+            <Link href="/dashboard" className="btn-primary text-lg px-8 py-4 glow">
+              <span className="flex items-center gap-2">Go to Dashboard <span>→</span></span>
+            </Link>
             <a href="#features" className="btn-secondary text-lg px-8 py-4">
               Explore Features
             </a>
@@ -129,11 +114,7 @@ export default async function LandingPage() {
           <p className="text-surface-400 text-lg mb-8 max-w-xl mx-auto relative">
             Join millions of Indian students learning smarter, not harder — with AI that speaks your language.
           </p>
-          {session ? (
-            <Link href="/dashboard" className="btn-primary text-lg px-8 py-4 glow relative">Go to Dashboard</Link>
-          ) : (
-            <Link href="/login?tab=signup" className="btn-primary text-lg px-8 py-4 glow relative">Get Started Free — It&apos;s Free</Link>
-          )}
+          <Link href="/dashboard" className="btn-primary text-lg px-8 py-4 glow relative">Go to Dashboard</Link>
         </div>
       </main>
 

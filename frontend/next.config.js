@@ -11,11 +11,11 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval'",  // unsafe-eval needed for Next.js dev
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://*.supabase.co",
+              "img-src 'self' data: blob: https://*.supabase.co https:",
               "font-src 'self'",
-               "connect-src 'self' https://*.supabase.co wss://*.supabase.co https: wss:",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.up.railway.app https://api.stability.ai https: wss:",
               "media-src 'self' blob:",
               "frame-ancestors 'none'",
             ].join("; "),

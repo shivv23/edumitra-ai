@@ -1,42 +1,32 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-class ApiError extends Error {
-  constructor(public status: number, message: string) {
-    super(message);
-    this.name = "ApiError";
-  }
+// Store auth token from browser Supabase session
+let _authToken: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  _authToken = token;
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15000);
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    signal: controller.signal,
-    ...options,
-  });
-  clearTimeout(timeout);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new ApiError(res.status, body.detail || "Request failed");
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options?.headers as Record<string, string>),
+  };
+  if (_authToken) {
+    headers["Authorization"] = `Bearer ${_authToken}`;
   }
-  if (res.status === 204) return undefined as T;
-  return res.json();
-}
 
-async function upload<T>(path: string, formData: FormData): Promise<T> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
   const res = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    body: formData,
-    signal: controller.signal,
+    ...options,
+    headers,
+    signal: AbortSignal.timeout(10000),
   });
-  clearTimeout(timeout);
+
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new ApiError(res.status, body.detail || "Upload failed");
+    const text = await res.text();
+    throw new Error(`API ${res.status}: ${text}`);
   }
+
   return res.json();
 }
 
@@ -44,11 +34,31 @@ export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: "POST", body: body ? JSON.stringify(body) : undefined }),
-  put: <T>(path: string, body: unknown) =>
-    request<T>(path, { method: "PUT", body: JSON.stringify(body) }),
-  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
-  upload: <T>(path: string, formData: FormData) => upload<T>(path, formData),
+  upload: <T>(path: string, formData: FormData) => {
+    const headers: Record<string, string> = {};
+    if (_authToken) headers["Authorization"] = `Bearer ${_authToken}`;
+    return fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      body: formData,
+      headers,
+      signal: AbortSignal.timeout(30000),
+    }).then(async (res) => {
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+      return res.json() as T;
+    });
+  },
 };
+
+export async function fetchDashboard() {
+  return api.get<{
+    overall_mastery: number;
+    topics_covered: number;
+    quizzes_taken: number;
+    streak: number;
+    wellness_status: string;
+    last_checkin?: string;
+  }>("/api/dashboard");
+}
 
 export async function fetchStudyPlan() {
   return api.get<{
@@ -59,28 +69,33 @@ export async function fetchStudyPlan() {
 export async function fetchQuiz(topic?: string) {
   return api.post<{
     questions: { question: string; options: string[]; correctAnswer: number; explanation: string }[];
-  }>("/api/study/quiz", { topic });
+  }>("/api/study/quiz", { topic: topic || "quadratic_equations" });
 }
 
 export async function sendChatMessage(message: string, history?: { role: string; content: string }[]) {
-  return api.post<{ response: string; type?: string }>("/api/study/query", { message, history });
-}
-
-export async function uploadNotes(file: File) {
-  const fd = new FormData();
-  fd.append("file", file);
-  return api.upload<{ analysis: string; summary: string }>("/api/upload/notes", fd);
-}
-
-export async function wellnessCheckIn(sentiment: number, note?: string) {
-  return api.post<{ response: string; risk_level: string; crisis_detected: boolean }>("/api/wellness/checkin", {
-    sentiment_score: sentiment,
-    note,
+  return api.post<{ response: string; type: string }>("/api/study/query", {
+    query: message,
+    history: history || [],
   });
 }
 
+export async function uploadNotes(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return api.upload<{ analysis: string; summary: string }>("/api/study/query/file", formData);
+}
+
+export async function wellnessCheckIn(sentiment: number, note?: string) {
+  return api.post<{ response: string; risk_level: string; crisis_detected: boolean }>(
+    "/api/wellness/checkin",
+    { sentiment_score: sentiment, note }
+  );
+}
+
 export async function fetchWellnessHistory() {
-  return api.get<{ checkins: { sentiment_score: number; created_at: string }[] }>("/api/wellness/history");
+  return api.get<{ checkins: { sentiment_score: number; created_at: string }[] }>(
+    "/api/wellness/history"
+  );
 }
 
 export async function fetchProgress() {
@@ -117,18 +132,7 @@ export async function fetchBurnoutRisk() {
 }
 
 export async function sendAudioMessage(audioBlob: Blob) {
-  const fd = new FormData();
-  fd.append("audio", audioBlob, "recording.webm");
-  return api.upload<{ transcript: string; response: string }>("/api/study/voice", fd);
-}
-
-export async function fetchDashboard() {
-  return api.get<{
-    overall_mastery: number;
-    topics_covered: number;
-    quizzes_taken: number;
-    streak: number;
-    wellness_status: string;
-    last_checkin?: string;
-  }>("/api/dashboard");
+  const formData = new FormData();
+  formData.append("audio", audioBlob, "recording.webm");
+  return api.upload<{ transcript: string; response: string }>("/api/study/voice", formData);
 }

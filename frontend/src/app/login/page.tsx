@@ -1,61 +1,56 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { signInWithEmail, signUp } from "./actions";
-
-function Alert({ type, message }: { type: "error" | "success"; message: string }) {
-  const colors = {
-    error: "bg-red-500/10 border-red-500/20 text-red-400",
-    success: "bg-accent-500/10 border-accent-500/20 text-accent-400",
-  };
-  return <div className={`mb-4 p-3 rounded-xl border ${colors[type]} text-sm animate-slide-up`}>{message}</div>;
-}
-
-function SubmitButton({ label, pending }: { label: string; pending: boolean }) {
-  return (
-    <button type="submit" disabled={pending} className="btn-primary w-full mt-2">
-      {pending ? (
-        <span className="flex items-center justify-center gap-2">
-          <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-          </svg>
-          {label}...
-        </span>
-      ) : label}
-    </button>
-  );
-}
+import { useState, Suspense } from "react";
+import { useRouter } from "next/navigation";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { setAuthToken } from "@/lib/api";
 
 function LoginFormInner() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [tab, setTab] = useState(searchParams.get("tab") || "login");
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("student");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState("");
 
-  async function handleSignIn(e: React.FormEvent<HTMLFormElement>) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    setPending(true);
-    setError(null);
-    const form = new FormData(e.currentTarget);
-    const result = await signInWithEmail(form);
-    setPending(false);
-    if (result?.error) setError(result.error);
+    setError("");
+    setLoading(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      if (authError) throw new Error(authError.message);
+      if (data.session?.access_token) setAuthToken(data.session.access_token);
+      router.push("/dashboard");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  async function handleSignUp(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
-    setPending(true);
-    setError(null);
-    setSuccess(null);
-    const form = new FormData(e.currentTarget);
-    const result = await signUp(form);
-    setPending(false);
-    if (result?.error) setError(result.error);
-    if (result?.success) setSuccess(result.message || "Account created!");
+    setError("");
+    setLoading(true);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { name, role } },
+      });
+      if (authError) throw new Error(authError.message);
+      setSuccess("Check your email for the confirmation link.");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -75,88 +70,86 @@ function LoginFormInner() {
               <circle cx="16" cy="16" r="2" fill="currentColor" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold font-display">Welcome to EduMitra</h1>
-          <p className="text-surface-400 mt-1">Learn better, stress less — in your own language.</p>
+          <h1 className="text-2xl font-bold font-display">EduMitra AI</h1>
+          <p className="text-surface-400 mt-1">Learn Better, Stress Less</p>
         </div>
 
         <div className="glass-strong rounded-2xl p-8 animate-slide-up">
-          <div className="flex bg-surface-800/50 rounded-xl p-1 mb-6">
+          <div className="flex mb-6 bg-surface-800/50 rounded-lg p-1">
             <button
-              onClick={() => { setTab("login"); setError(null); setSuccess(null); router.replace("/login"); }}
-              className={`flex-1 py-2.5 text-center text-sm font-medium rounded-lg transition-all ${
-                tab !== "signup" ? "bg-primary-500/20 text-primary-300 shadow-sm" : "text-surface-400 hover:text-surface-200"
+              onClick={() => { setMode("login"); setError(""); setSuccess(""); }}
+              className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                mode === "login" ? "bg-primary-500/20 text-primary-300 shadow-sm" : "text-surface-400 hover:text-surface-200"
               }`}
             >
               Sign In
             </button>
             <button
-              onClick={() => { setTab("signup"); setError(null); setSuccess(null); router.replace("/login?tab=signup"); }}
-              className={`flex-1 py-2.5 text-center text-sm font-medium rounded-lg transition-all ${
-                tab === "signup" ? "bg-primary-500/20 text-primary-300 shadow-sm" : "text-surface-400 hover:text-surface-200"
+              onClick={() => { setMode("signup"); setError(""); setSuccess(""); }}
+              className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${
+                mode === "signup" ? "bg-primary-500/20 text-primary-300 shadow-sm" : "text-surface-400 hover:text-surface-200"
               }`}
             >
               Sign Up
             </button>
           </div>
 
-          {error && <Alert type="error" message={error} />}
-          {success && <Alert type="success" message={success} />}
-
-          {tab === "signup" ? (
-            <form onSubmit={handleSignUp} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="name" className="text-sm font-medium text-surface-300">Full Name</label>
-                <input id="name" name="name" type="text" placeholder="Your full name" required className="input-premium" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="email" className="text-sm font-medium text-surface-300">Email Address</label>
-                <input id="email" name="email" type="email" placeholder="you@school.edu.in" required className="input-premium" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="password" className="text-sm font-medium text-surface-300">Password</label>
-                <input id="password" name="password" type="password" placeholder="At least 8 characters" required minLength={8} className="input-premium" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="role" className="text-sm font-medium text-surface-300">I am a</label>
-                <select id="role" name="role" defaultValue="student" className="input-premium">
-                  <option value="student">Student</option>
-                  <option value="parent">Parent / Guardian</option>
-                  <option value="teacher">Teacher</option>
-                </select>
-              </div>
-              <div className="flex items-start gap-3 mt-2">
-                <input id="consent" name="consent" type="checkbox" required className="mt-1 w-4 h-4 rounded border-surface-700 bg-surface-800 accent-primary-500" />
-                <label htmlFor="consent" className="text-xs text-surface-400 leading-relaxed">
-                  I agree to the processing of my data in accordance with India&apos;s DPDP Act 2023.
-                  I am 18+ or have parental consent.
-                </label>
-              </div>
-              <SubmitButton label="Create Free Account" pending={pending} />
-            </form>
-          ) : (
-            <form onSubmit={handleSignIn} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="email" className="text-sm font-medium text-surface-300">Email Address</label>
-                <input id="email" name="email" type="email" placeholder="you@school.edu.in" required className="input-premium" />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label htmlFor="password" className="text-sm font-medium text-surface-300">Password</label>
-                <input id="password" name="password" type="password" placeholder="••••••••" required minLength={6} className="input-premium" />
-              </div>
-              <SubmitButton label="Sign In" pending={pending} />
-              <div className="text-center mt-2">
-                <button type="button" onClick={() => { setTab("signup"); setError(null); setSuccess(null); router.replace("/login?tab=signup"); }} className="text-sm text-primary-400 hover:text-primary-300 transition-colors">
-                  Don&apos;t have an account? Sign up
-                </button>
-              </div>
-            </form>
+          {error && (
+            <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              {error}
+            </div>
           )}
-        </div>
 
-        <p className="text-center text-surface-500 text-xs mt-6">
-          By continuing, you agree to our Terms of Service and Privacy Policy.
-          Protected by India&apos;s DPDP Act 2023 — your data is encrypted and secure.
-        </p>
+          {success && (
+            <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm">
+              {success}
+            </div>
+          )}
+
+          <form onSubmit={mode === "login" ? handleLogin : handleSignUp} className="flex flex-col gap-4">
+            {mode === "signup" && (
+              <input
+                type="text"
+                placeholder="Full Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="input-premium"
+                required
+              />
+            )}
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="input-premium"
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="input-premium"
+              minLength={8}
+              required
+            />
+            {mode === "signup" && (
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="input-premium"
+              >
+                <option value="student">Student</option>
+                <option value="teacher">Teacher</option>
+                <option value="parent">Parent</option>
+              </select>
+            )}
+            <button type="submit" disabled={loading} className="btn-primary w-full glow">
+              {loading ? "Please wait..." : mode === "login" ? "Sign In" : "Create Account"}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

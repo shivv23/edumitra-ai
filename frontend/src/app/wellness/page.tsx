@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getSession, getCurrentUser } from "@/lib/supabase/browser";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { WellnessCheckInCard } from "@/components/WellnessCard";
 import { Modal } from "@/components/Modal";
 import { BreathingExercise } from "@/components/BreathingExercise";
 import { QuickJournal } from "@/components/QuickJournal";
-import { fetchWellnessHistory } from "@/lib/api";
+import { fetchWellnessHistory, setAuthToken } from "@/lib/api";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 const HELPLINES = [
   { name: "iCall Helpline", phone: "9152987821", desc: "Mental health support" },
@@ -18,22 +19,32 @@ const HELPLINES = [
 ];
 
 export default function WellnessPage() {
-  const [session, setSession] = useState<any>(null);
-  const [user, setUser] = useState<any>(null);
+  const router = useRouter();
   const [breathingOpen, setBreathingOpen] = useState(false);
   const [journalOpen, setJournalOpen] = useState(false);
   const [trendData, setTrendData] = useState<number[] | null>(null);
   const [checkins, setCheckins] = useState<{ sentiment_score: number; created_at: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+      setAuthToken(session.access_token);
+      const meta = session.user?.user_metadata;
+      setUser({
+        name: (meta?.name as string) || session.user?.email?.split("@")[0] || "Student",
+        role: (meta?.role as string) || "student",
+      });
+    });
+  }, [router]);
 
   useEffect(() => {
     async function load() {
-      const s = await getSession();
-      if (s) {
-        setSession(s);
-        setUser(s.user);
-        getCurrentUser().then(u => { if (u) setUser(u); }).catch(() => {});
-      }
       try {
         const data = await fetchWellnessHistory();
         if (data?.checkins) {
@@ -49,12 +60,9 @@ export default function WellnessPage() {
     load();
   }, []);
 
-  const userName = user?.user_metadata?.name || "Student";
-  const userRole = user?.user_metadata?.role || "student";
-
   return (
     <div className="min-h-screen bg-surface-950">
-      <Navbar userName={userName} userRole={userRole} />
+      <Navbar userName={user?.name} userRole={user?.role} />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
         <div className="text-center mb-10">

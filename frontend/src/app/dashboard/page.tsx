@@ -1,33 +1,45 @@
-import { getSession, getCurrentUser } from "@/lib/supabase/client";
-import { redirect } from "next/navigation";
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import { StudyPlan } from "@/components/StudyPlan";
 import { WellnessCard } from "@/components/WellnessCard";
-import { api } from "@/lib/api";
-import { masteryColor } from "@/lib/utils";
+import { fetchDashboard, setAuthToken } from "@/lib/api";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-async function getDashboardData() {
-  try {
-    return await api.get<{
-      overall_mastery: number;
-      topics_covered: number;
-      quizzes_taken: number;
-      streak: number;
-      wellness_status: string;
-      last_checkin?: string;
-    }>("/api/dashboard");
-  } catch {
-    return null;
-  }
-}
+export default function DashboardPage() {
+  const router = useRouter();
+  const [data, setData] = useState<{
+    overall_mastery: number;
+    topics_covered: number;
+    quizzes_taken: number;
+    streak: number;
+    wellness_status: string;
+    last_checkin?: string;
+  } | null>(null);
+  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
 
-export default async function DashboardPage() {
-  const session = await getSession();
-  const user = session ? await getCurrentUser() : null;
-  const userName = user?.user_metadata?.name || user?.email?.split("@")[0] || "Student";
-  const userRole = user?.user_metadata?.role || "student";
-  const data = await getDashboardData();
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+      setAuthToken(session.access_token);
+      const meta = session.user?.user_metadata;
+      setUser({
+        name: (meta?.name as string) || session.user?.email?.split("@")[0] || "Student",
+        role: (meta?.role as string) || "student",
+      });
+    });
+  }, [router]);
+
+  useEffect(() => {
+    if (user) fetchDashboard().then(setData).catch(() => {});
+  }, [user]);
 
   const stats = [
     { value: data ? `${data.overall_mastery}%` : "—", label: "Overall Mastery", trend: data ? "Updated today" : "Sign in to see", color: "from-primary-500 to-accent-500" },
@@ -38,13 +50,13 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-surface-950">
-      <Navbar userName={userName} userRole={userRole} avatarUrl={user?.user_metadata?.avatar_url} />
+      <Navbar userName={user?.name} userRole={user?.role} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold font-display">
-              Welcome back, <span className="gradient-text">{userName?.split(" ")[0]}</span>
+              Welcome back, <span className="gradient-text">{user?.name?.split(" ")[0]}</span>
             </h1>
             <p className="text-surface-400 mt-1">Here&apos;s your learning overview for today.</p>
           </div>

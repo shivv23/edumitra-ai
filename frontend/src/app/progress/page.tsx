@@ -2,28 +2,38 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getSession, getCurrentUser } from "@/lib/supabase/browser";
+
 import Navbar from "@/components/Navbar";
-import { fetchProgress } from "@/lib/api";
+import { fetchProgress, setAuthToken } from "@/lib/api";
 import { masteryColor, masteryLabel } from "@/lib/utils";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 export default function ProgressPage() {
   const router = useRouter();
-  const [session, setSession] = useState<any>(null);
-  const [user, setUser] = useState<any>(null);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+      setAuthToken(session.access_token);
+      const meta = session.user?.user_metadata;
+      setUser({
+        name: (meta?.name as string) || session.user?.email?.split("@")[0] || "Student",
+        role: (meta?.role as string) || "student",
+      });
+    });
+  }, [router]);
 
   async function load() {
     setLoading(true);
     setError(null);
-    const s = await getSession();
-    if (s) {
-      setSession(s);
-      setUser(s.user);
-      getCurrentUser().then(u => { if (u) setUser(u); }).catch(() => {});
-    }
     try {
       const d = await fetchProgress();
       setData(d);
@@ -35,16 +45,13 @@ export default function ProgressPage() {
   }
 
   useEffect(() => { load(); }, []);
-
-  const userName = user?.user_metadata?.name || "Student";
-  const userRole = user?.user_metadata?.role || "student";
   const subjects = data?.subjects || [];
   const activities = data?.recent_activity || [];
 
   if (loading) {
     return (
       <div className="min-h-screen bg-surface-950">
-        <Navbar userName={userName} userRole={userRole} />
+        <Navbar userName={user?.name} userRole={user?.role} />
         <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
           <div className="skeleton h-8 w-48 mb-2" />
           <div className="skeleton h-4 w-64 mb-8" />
@@ -57,7 +64,7 @@ export default function ProgressPage() {
 
   return (
     <div className="min-h-screen bg-surface-950">
-      <Navbar userName={userName} userRole={userRole} />
+      <Navbar userName={user?.name} userRole={user?.role} />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
         <div className="flex items-center justify-between mb-8">

@@ -1,44 +1,47 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getSession, getCurrentUser } from "@/lib/supabase/browser";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { ChatInterface } from "@/components/ChatInterface";
 import { FileUpload } from "@/components/FileUpload";
 import { VoiceRecorder } from "@/components/VoiceRecorder";
 import { QuizCard } from "@/components/QuizCard";
 import { SUPPORTED_LANGUAGES } from "@/types";
+import { setAuthToken } from "@/lib/api";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 export default function StudyPage() {
-  const [session, setSession] = useState<any>(null);
-  const [user, setUser] = useState<any>(null);
+  const router = useRouter();
   const [showUpload, setShowUpload] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
   const [language, setLanguage] = useState("hi");
   const [activeTab, setActiveTab] = useState("chat");
   const [voiceText, setVoiceText] = useState("");
   const [ready, setReady] = useState(false);
+  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
 
   useEffect(() => {
-    async function load() {
-      const s = await getSession();
-      if (s) {
-        setSession(s);
-        setUser(s.user);
-        getCurrentUser().then(u => { if (u) setUser(u); }).catch(() => {});
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.push("/login");
+        return;
       }
+      setAuthToken(session.access_token);
+      const meta = session.user?.user_metadata;
+      setUser({
+        name: (meta?.name as string) || session.user?.email?.split("@")[0] || "Student",
+        role: (meta?.role as string) || "student",
+      });
       setReady(true);
-    }
-    load();
-  }, []);
+    });
+  }, [router]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("upload") === "true") setShowUpload(true);
   }, []);
-
-  const userName = user?.user_metadata?.name || "Student";
-  const userRole = user?.user_metadata?.role || "student";
 
   const handleChatUploadClick = useCallback(() => {
     document.getElementById("study-file-input")?.click();
@@ -54,7 +57,7 @@ export default function StudyPage() {
 
   return (
     <div className="min-h-screen bg-surface-950 flex flex-col">
-      <Navbar userName={userName} userRole={userRole} />
+      <Navbar userName={user?.name} userRole={user?.role} />
 
       <main className="flex-1 flex flex-col max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 animate-fade-in">
         <div className="flex items-center justify-between mb-6">

@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getSession, getCurrentUser } from "@/lib/supabase/browser";
+import { useRouter } from "next/navigation";
+
 import Navbar from "@/components/Navbar";
-import { fetchStudents } from "@/lib/api";
+import { fetchStudents, setAuthToken } from "@/lib/api";
 import { masteryColor } from "@/lib/utils";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
@@ -18,21 +20,31 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function TeacherDashboard() {
-  const [session, setSession] = useState<any>(null);
-  const [user, setUser] = useState<any>(null);
+  const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.push("/login");
+        return;
+      }
+      setAuthToken(session.access_token);
+      const meta = session.user?.user_metadata;
+      setUser({
+        name: (meta?.name as string) || session.user?.email?.split("@")[0] || "Teacher",
+        role: (meta?.role as string) || "teacher",
+      });
+    });
+  }, [router]);
 
   async function load() {
     setLoading(true);
     setError(null);
-    const s = await getSession();
-    if (s) {
-      setSession(s);
-      setUser(s.user);
-      getCurrentUser().then(u => { if (u) setUser(u); }).catch(() => {});
-    }
     try {
       const d = await fetchStudents();
       setData(d);
@@ -45,13 +57,10 @@ export default function TeacherDashboard() {
 
   useEffect(() => { load(); }, []);
 
-  const userName = user?.user_metadata?.name || "Teacher";
-  const userRole = user?.user_metadata?.role || "teacher";
-
   if (loading) {
     return (
       <div className="min-h-screen bg-surface-950">
-        <Navbar userName={userName} userRole={userRole} />
+        <Navbar userName={user?.name} userRole={user?.role} />
         <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
           <div className="skeleton h-8 w-48 mb-2" />
           <div className="skeleton h-4 w-64 mb-8" />
@@ -73,7 +82,7 @@ export default function TeacherDashboard() {
 
   return (
     <div className="min-h-screen bg-surface-950">
-      <Navbar userName={userName} userRole={userRole} />
+      <Navbar userName={user?.name} userRole={user?.role} />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
         <div className="flex items-center justify-between mb-8">
