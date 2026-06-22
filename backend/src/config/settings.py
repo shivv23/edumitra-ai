@@ -68,7 +68,7 @@ class Settings(BaseSettings):
         supabase_url = info.data.get("supabase_url")
         if not supabase_url:
             raise ValueError("Either SUPABASE_JWKS_URL or SUPABASE_URL must be provided")
-        return supabase_url.rstrip("/") + "/.well-known/jwks.json"
+        return supabase_url.rstrip("/") + "/auth/v1/.well-known/jwks.json"
 
     @property
     def allowed_origins_list(self) -> List[str]:
