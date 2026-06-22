@@ -50,7 +50,7 @@ export default async function LandingPage() {
         <div className="flex flex-col items-center text-center gap-8 max-w-4xl mx-auto animate-fade-in">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500/10 border border-primary-500/20 text-primary-300 text-sm font-medium shimmer">
             <span className="w-2 h-2 rounded-full bg-primary-400 animate-pulse" />
-            HackArena 2.0 — Multi-Agent GenAI
+            Multi-Agent GenAI Platform
           </div>
 
           <h1 className="text-5xl md:text-7xl font-bold font-display leading-tight">
@@ -128,7 +128,7 @@ export default async function LandingPage() {
             <span>EduMitra AI</span>
           </div>
           <p>For India&apos;s students — learn better, stress less, in your own language.</p>
-          <p>Team CodyRhodes · HackArena 2.0</p>
+          <p>Team CodyRhodes</p>
         </div>
       </footer>
     </div>

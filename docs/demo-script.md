@@ -1,4 +1,4 @@
-# Demo Video Script — EduMitra AI
+# Demo Walkthrough — EduMitra AI
 
 **Duration:** 3 minutes  
 **URL:** https://edumitraai.vercel.app  
