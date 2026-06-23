@@ -46,7 +46,7 @@ def get_gemini_client():
     return genai.Client(api_key=key)
 
 
-def get_gemini_model(model: str = "gemini-2.5-flash") -> str:
+def get_gemini_model(model: str = "gemini-2.5-flash-lite") -> str:
     return model
 
 

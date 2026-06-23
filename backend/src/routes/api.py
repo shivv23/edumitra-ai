@@ -103,16 +103,24 @@ async def _gemini_chat(message: str, history: Optional[List[Dict[str, str]]] = N
                 contents.append({"role": role, "parts": [{"text": msg.get("content", "")}]})
         contents.append({"role": "user", "parts": [{"text": message}]})
 
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=contents,
-            config={
-                "system_instruction": _CHAT_SYSTEM_PROMPT,
-                "max_output_tokens": 1024,
-                "temperature": 0.5,
-            },
-        )
-        return response.text or "I'm thinking... Please ask again."
+        models_to_try = ["gemini-2.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash"]
+        last_error = None
+        for model in models_to_try:
+            try:
+                response = client.models.generate_content(
+                    model=model,
+                    contents=contents,
+                    config={
+                        "system_instruction": _CHAT_SYSTEM_PROMPT,
+                        "max_output_tokens": 1024,
+                        "temperature": 0.5,
+                    },
+                )
+                return response.text or "I'm thinking... Please ask again."
+            except Exception as e:
+                last_error = e
+                logger.warning("%s failed: %s", model, e)
+        raise last_error  # type: ignore[misc]
     except Exception as e:
         logger.error("Gemini chat failed: %s", e)
         return (
