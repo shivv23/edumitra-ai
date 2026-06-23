@@ -11,10 +11,10 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Supabase
-    supabase_url: str
-    supabase_service_role_key: str
-    supabase_anon_key: str
+    # Supabase (optional — self-contained JWT auth works without it)
+    supabase_url: str = ""
+    supabase_service_role_key: str = ""
+    supabase_anon_key: str = ""
     supabase_jwks_url: str | None = None
 
     # Encryption
@@ -66,9 +66,9 @@ class Settings(BaseSettings):
         if v:
             return v
         supabase_url = info.data.get("supabase_url")
-        if not supabase_url:
-            raise ValueError("Either SUPABASE_JWKS_URL or SUPABASE_URL must be provided")
-        return supabase_url.rstrip("/") + "/auth/v1/.well-known/jwks.json"
+        if supabase_url:
+            return supabase_url.rstrip("/") + "/auth/v1/.well-known/jwks.json"
+        return ""
 
     @property
     def allowed_origins_list(self) -> List[str]:
