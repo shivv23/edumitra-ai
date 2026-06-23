@@ -4,6 +4,8 @@
 
 An AI tutor and wellness companion for Indian students grades 6–12. NCERT-aligned, works in 11 Indian languages, compliant with DPDP Act 2023.
 
+[▶ Watch Demo](https://drive.google.com/file/d/1trRTSuqPH0p0drXjT9qoKJlzKxEQfaUk/view?usp=sharing)
+
 ---
 
 ## Overview
