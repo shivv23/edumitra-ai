@@ -80,7 +80,7 @@ export async function fetchQuiz(topic?: string) {
 
 export async function sendChatMessage(message: string, history?: { role: string; content: string }[]) {
   return api.post<{ response: string; type: string }>("/api/study/query", {
-    query: message,
+    message,
     history: history || [],
   });
 }
