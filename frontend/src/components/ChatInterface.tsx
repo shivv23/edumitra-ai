@@ -84,8 +84,10 @@ export function ChatInterface({ onUploadClick, externalText }: ChatInterfaceProp
     setIsLoading(true);
 
     try {
-      const history = messages.map((m) => ({ role: m.role, content: m.content }));
-      const result = await sendChatMessage(text, history);
+      const recentHistory = messages
+        .slice(-10)
+        .map((m) => ({ role: m.role, content: m.content }));
+      const result = await sendChatMessage(text, recentHistory);
 
       const assistantMessage: Message = {
         id: `ai-${Date.now()}`,
@@ -95,11 +97,13 @@ export function ChatInterface({ onUploadClick, externalText }: ChatInterfaceProp
         type: (result.type as Message["type"]) || "text",
       };
       setMessages((prev) => [...prev, assistantMessage]);
-    } catch {
+    } catch (err) {
       const errorMessage: Message = {
         id: `error-${Date.now()}`,
         role: "assistant",
-        content: "I'm having trouble connecting to my knowledge base. Please try again in a moment.",
+        content: err instanceof Error
+          ? `I'm having trouble connecting. ${err.message}`
+          : "I'm having trouble connecting to my knowledge base. Please try again in a moment.",
         timestamp: new Date(),
         type: "text",
       };

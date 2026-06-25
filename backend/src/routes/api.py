@@ -1,5 +1,6 @@
 """API routes bridging frontend calls to agents and database."""
 
+import asyncio
 import io
 import json
 import logging
@@ -9,6 +10,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status as http_status
 from pydantic import BaseModel, Field
+from google.genai import types as genai_types
 
 from src.auth.dependencies import get_current_user_id
 from src.config.settings import settings
@@ -103,18 +105,19 @@ async def _gemini_chat(message: str, history: Optional[List[Dict[str, str]]] = N
                 contents.append({"role": role, "parts": [{"text": msg.get("content", "")}]})
         contents.append({"role": "user", "parts": [{"text": message}]})
 
-        models_to_try = ["gemini-2.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash"]
+        models_to_try = ["gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
         last_error = None
         for model in models_to_try:
             try:
-                response = client.models.generate_content(
+                response = await asyncio.to_thread(
+                    client.models.generate_content,
                     model=model,
                     contents=contents,
-                    config={
-                        "system_instruction": _CHAT_SYSTEM_PROMPT,
-                        "max_output_tokens": 1024,
-                        "temperature": 0.5,
-                    },
+                    config=genai_types.GenerateContentConfig(
+                        system_instruction=_CHAT_SYSTEM_PROMPT,
+                        max_output_tokens=1024,
+                        temperature=0.5,
+                    ),
                 )
                 return response.text or "I'm thinking... Please ask again."
             except Exception as e:
@@ -260,19 +263,6 @@ async def get_dashboard(user_id: str = Depends(get_current_user_id)):
 
 @router.post("/study/query", response_model=ChatResponse)
 async def study_query(req: ChatRequest, user_id: str = Depends(get_current_user_id)):
-    try:
-        from agents.content_gen.generator import generate_explanation
-        result = await generate_explanation(
-            topic=req.message,
-            subject="General",
-            grade=8,
-            language="en",
-        )
-        if result.get("success"):
-            return ChatResponse(response=result["explanation"], type="text")
-    except Exception as e:
-        logger.warning("generate_explanation failed, falling back: %s", e)
-
     response = await _gemini_chat(req.message, req.history)
     return ChatResponse(response=response, type="text")
 

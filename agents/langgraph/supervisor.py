@@ -4,6 +4,7 @@ import asyncio
 import logging
 from typing import Literal
 
+from google.genai import types as genai_types
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -90,13 +91,14 @@ async def curriculum_rag_agent(state: GraphState) -> GraphState:
         )
 
         client = get_gemini_client()
-        response = client.models.generate_content(
+        response = await asyncio.to_thread(
+            client.models.generate_content,
             model="gemini-2.5-flash",
             contents=safe_prompt,
-            config={
-                "max_output_tokens": 1024,
-                "temperature": 0.5,
-            },
+            config=genai_types.GenerateContentConfig(
+                max_output_tokens=1024,
+                temperature=0.5,
+            ),
         )
         state["agent_outputs"]["curriculum_rag"] = {
             "agent_name": "curriculum_rag",

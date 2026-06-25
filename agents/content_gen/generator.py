@@ -3,12 +3,14 @@
 Security: all prompts sanitized, output validated, images re-encoded server-side.
 """
 
+import asyncio
 import json
 import logging
 import re
 from typing import Any, Dict, List, Optional
 from enum import Enum
 
+from google.genai import types as genai_types
 from agents.llm import get_gemini_client, claude_chat
 
 logger = logging.getLogger(__name__)
@@ -116,14 +118,15 @@ async def generate_explanation(
             logger.info("Claude returned empty, falling back to Gemini")
 
         client = get_gemini_client()
-        response = client.models.generate_content(
+        response = await asyncio.to_thread(
+            client.models.generate_content,
             model="gemini-2.5-flash",
             contents=prompt,
-            config={
-                "system_instruction": _EXPLANATION_SYSTEM_PROMPT,
-                "max_output_tokens": 800,
-                "temperature": 0.4,
-            },
+            config=genai_types.GenerateContentConfig(
+                system_instruction=_EXPLANATION_SYSTEM_PROMPT,
+                max_output_tokens=800,
+                temperature=0.4,
+            ),
         )
         text = ContentSafetyFilter.sanitize_output(response.text)
         return {"explanation": text, "success": True}
@@ -167,14 +170,15 @@ async def generate_quiz(
 
         if not text:
             client = get_gemini_client()
-            response = client.models.generate_content(
+            response = await asyncio.to_thread(
+                client.models.generate_content,
                 model="gemini-2.5-flash",
                 contents=prompt,
-                config={
-                    "system_instruction": _QUIZ_SYSTEM_PROMPT,
-                    "max_output_tokens": 2000,
-                    "temperature": 0.6,
-                },
+                config=genai_types.GenerateContentConfig(
+                    system_instruction=_QUIZ_SYSTEM_PROMPT,
+                    max_output_tokens=2000,
+                    temperature=0.6,
+                ),
             )
             text = response.text.strip()
 
@@ -222,14 +226,15 @@ async def generate_mind_map(topic: str, subject: str) -> Dict[str, Any]:
             f"{{\"center\": str, \"branches\": [{{\"name\": str, \"children\": [str]}}]}}"
         )
 
-        response = client.models.generate_content(
+        response = await asyncio.to_thread(
+            client.models.generate_content,
             model="gemini-2.5-flash",
             contents=prompt,
-            config={
-                "system_instruction": "You are an educational mind map generator. Output only valid JSON.",
-                "max_output_tokens": 1500,
-                "temperature": 0.4,
-            },
+            config=genai_types.GenerateContentConfig(
+                system_instruction="You are an educational mind map generator. Output only valid JSON.",
+                max_output_tokens=1500,
+                temperature=0.4,
+            ),
         )
 
         text = response.text.strip()

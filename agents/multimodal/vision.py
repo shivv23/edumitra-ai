@@ -3,10 +3,12 @@
 Security: never accepts user-supplied URLs; images are always server-side stored objects.
 """
 
+import asyncio
 import logging
 import base64
 from typing import Any, Dict, Optional
 
+from google.genai import types as genai_types
 from agents.llm import get_gemini_client
 
 logger = logging.getLogger(__name__)
@@ -34,26 +36,30 @@ async def analyze_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> Di
 
     try:
         client = get_gemini_client()
-        from google.genai import types
 
-        img = types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
+        img = genai_types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
 
-        response = client.models.generate_content(
+        response = await asyncio.to_thread(
+            client.models.generate_content,
             model="gemini-2.5-flash",
             contents=["Analyze this educational image. Extract all text and describe any diagrams.", img],
-            config={
-                "system_instruction": _VISION_SYSTEM_PROMPT,
-                "max_output_tokens": 1000,
-                "temperature": 0.3,
-            },
+            config=genai_types.GenerateContentConfig(
+                system_instruction=_VISION_SYSTEM_PROMPT,
+                max_output_tokens=1000,
+                temperature=0.3,
+            ),
         )
 
         full_text = response.text or ""
 
-        summary_response = client.models.generate_content(
+        summary_response = await asyncio.to_thread(
+            client.models.generate_content,
             model="gemini-2.5-flash",
             contents=[f"Summarize this in 2-3 sentences:\n\n{full_text}"],
-            config={"max_output_tokens": 200, "temperature": 0.2},
+            config=genai_types.GenerateContentConfig(
+                max_output_tokens=200,
+                temperature=0.2,
+            ),
         )
 
         summary = summary_response.text.strip() if summary_response.text else full_text[:200]
@@ -84,17 +90,17 @@ async def extract_text_from_image(image_bytes: bytes, mime_type: str = "image/jp
 
     try:
         client = get_gemini_client()
-        from google.genai import types
 
-        img = types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
+        img = genai_types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
 
-        response = client.models.generate_content(
+        response = await asyncio.to_thread(
+            client.models.generate_content,
             model="gemini-2.5-flash",
             contents=["Extract all text from this image. Preserve the original language. Output only the extracted text.", img],
-            config={
-                "max_output_tokens": 2000,
-                "temperature": 0.1,
-            },
+            config=genai_types.GenerateContentConfig(
+                max_output_tokens=2000,
+                temperature=0.1,
+            ),
         )
 
         return response.text.strip() if response.text else None
