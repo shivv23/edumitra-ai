@@ -21,7 +21,8 @@ class Settings(BaseSettings):
     encryption_key: str
 
     # LLM
-    gemini_api_key: str
+    gemini_api_key: str = ""
+    grok_api_key: str = ""
     claude_api_key: str
     stable_diffusion_api_key: str
 

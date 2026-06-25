@@ -10,8 +10,7 @@ import re
 from typing import Any, Dict, List, Optional
 from enum import Enum
 
-from google.genai import types as genai_types
-from agents.llm import get_gemini_client, claude_chat
+from agents.llm import grok_chat, claude_chat
 
 logger = logging.getLogger(__name__)
 
@@ -117,19 +116,16 @@ async def generate_explanation(
                 return {"explanation": ContentSafetyFilter.sanitize_output(text), "success": True}
             logger.info("Claude returned empty, falling back to Gemini")
 
-        client = get_gemini_client()
-        response = await asyncio.to_thread(
-            client.models.generate_content,
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=genai_types.GenerateContentConfig(
-                system_instruction=_EXPLANATION_SYSTEM_PROMPT,
-                max_output_tokens=800,
-                temperature=0.4,
-            ),
+        text = await grok_chat(
+            message=prompt,
+            system_prompt=_EXPLANATION_SYSTEM_PROMPT,
+            max_tokens=800,
+            temperature=0.4,
+            model="grok-2-latest",
         )
-        text = ContentSafetyFilter.sanitize_output(response.text)
-        return {"explanation": text, "success": True}
+        if text:
+            return {"explanation": ContentSafetyFilter.sanitize_output(text), "success": True}
+        return {"error": "Empty response from Grok", "success": False}
     except Exception as e:
         logger.error("Explanation generation failed: %s", e)
         return {
@@ -169,18 +165,14 @@ async def generate_quiz(
             )
 
         if not text:
-            client = get_gemini_client()
-            response = await asyncio.to_thread(
-                client.models.generate_content,
-                model="gemini-2.5-flash",
-                contents=prompt,
-                config=genai_types.GenerateContentConfig(
-                    system_instruction=_QUIZ_SYSTEM_PROMPT,
-                    max_output_tokens=2000,
-                    temperature=0.6,
-                ),
+            text = await grok_chat(
+                message=prompt,
+                system_prompt=_QUIZ_SYSTEM_PROMPT,
+                max_tokens=2000,
+                temperature=0.6,
+                model="grok-2-latest",
             )
-            text = response.text.strip()
+            text = text.strip()
 
         text = text.strip()
         text = re.sub(r"^```(?:json)?\s*", "", text)
@@ -219,25 +211,20 @@ async def generate_mind_map(topic: str, subject: str) -> Dict[str, Any]:
         return {"error": "Cannot generate mind map on this topic.", "success": False}
 
     try:
-        client = get_gemini_client()
         prompt = (
             f"Create a mind map structure for '{topic}' in subject '{subject}'. "
             f"Return ONLY valid JSON with format: "
             f"{{\"center\": str, \"branches\": [{{\"name\": str, \"children\": [str]}}]}}"
         )
 
-        response = await asyncio.to_thread(
-            client.models.generate_content,
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=genai_types.GenerateContentConfig(
-                system_instruction="You are an educational mind map generator. Output only valid JSON.",
-                max_output_tokens=1500,
-                temperature=0.4,
-            ),
+        text = await grok_chat(
+            message=prompt,
+            system_prompt="You are an educational mind map generator. Output only valid JSON.",
+            max_tokens=1500,
+            temperature=0.4,
+            model="grok-2-latest",
         )
-
-        text = response.text.strip()
+        text = text.strip()
         text = re.sub(r"^```(?:json)?\s*", "", text)
         text = re.sub(r"\s*```$", "", text)
         return json.loads(text)

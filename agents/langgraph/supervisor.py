@@ -4,7 +4,6 @@ import asyncio
 import logging
 from typing import Literal
 
-from google.genai import types as genai_types
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -69,7 +68,7 @@ async def curriculum_rag_agent(state: GraphState) -> GraphState:
         from agents.rag.retriever import retrieve_context, format_context_for_prompt
         from agents.rag.vector_store import seed_curriculum
         from agents.langgraph.sanitizer import build_safe_prompt
-        from agents.llm import get_gemini_client
+        from agents.llm import grok_chat
 
         await asyncio.to_thread(seed_curriculum)
 
@@ -79,31 +78,26 @@ async def curriculum_rag_agent(state: GraphState) -> GraphState:
         )
         context = format_context_for_prompt(results)
 
-        safe_prompt = build_safe_prompt(
-            system_prompt=(
-                "You are EduMitra, an AI tutor for Indian students. "
-                "Answer clearly using NCERT/CBSE curriculum concepts. "
-                "If asked in Hindi or another Indian language, respond in that language. "
-                "Keep responses concise and age-appropriate. No HTML."
-            ),
-            user_content=prompt,
-            retrieved_context=context or "",
+        system_prompt = (
+            "You are EduMitra, an AI tutor for Indian students. "
+            "Answer clearly using NCERT/CBSE curriculum concepts. "
+            "If asked in Hindi or another Indian language, respond in that language. "
+            "Keep responses concise and age-appropriate. No HTML."
         )
+        if context:
+            system_prompt += f"\n\nRelevant curriculum context:\n{context}"
 
-        client = get_gemini_client()
-        response = await asyncio.to_thread(
-            client.models.generate_content,
-            model="gemini-2.5-flash",
-            contents=safe_prompt,
-            config=genai_types.GenerateContentConfig(
-                max_output_tokens=1024,
-                temperature=0.5,
-            ),
+        response = await grok_chat(
+            message=prompt,
+            system_prompt=system_prompt,
+            max_tokens=1024,
+            temperature=0.5,
+            model="grok-2-latest",
         )
         state["agent_outputs"]["curriculum_rag"] = {
             "agent_name": "curriculum_rag",
             "success": True,
-            "data": {"message": response.text or "I'm thinking..."},
+            "data": {"message": response or "I'm thinking..."},
             "error": None,
         }
     except Exception as e:

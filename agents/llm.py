@@ -1,6 +1,7 @@
 """Shared LLM client helpers for EduMitra agents.
 
 Loads API keys from environment or .env file once at import time.
+Supports Grok (xAI), Claude (Anthropic), and Gemini (Google).
 """
 
 import os
@@ -16,7 +17,6 @@ def _ensure_env():
     global _loaded
     if _loaded:
         return
-    # Try loading .env from multiple locations
     candidates = [
         Path.cwd() / ".env",
         Path(__file__).resolve().parent.parent / ".env",
@@ -36,8 +36,7 @@ def _ensure_env():
 
 def get_gemini_key() -> str:
     _ensure_env()
-    key = os.environ.get("GEMINI_API_KEY", "placeholder")
-    return key
+    return os.environ.get("GEMINI_API_KEY", "placeholder")
 
 
 def get_gemini_client():
@@ -52,8 +51,7 @@ def get_gemini_model(model: str = "gemini-2.5-flash-lite") -> str:
 
 def get_claude_key() -> str:
     _ensure_env()
-    key = os.environ.get("CLAUDE_API_KEY", "placeholder")
-    return key
+    return os.environ.get("CLAUDE_API_KEY", "placeholder")
 
 
 def get_claude_client():
@@ -68,7 +66,6 @@ async def claude_chat(
     max_tokens: int = 1024,
     temperature: float = 0.5,
 ) -> str:
-    """Send a chat message to Claude and return the response text."""
     try:
         client = get_claude_client()
         msg = client.messages.create(
@@ -81,4 +78,83 @@ async def claude_chat(
         return msg.content[0].text if msg.content else ""
     except Exception as e:
         logger.warning("Claude chat failed: %s", e)
+        return ""
+
+
+def get_grok_key() -> str:
+    _ensure_env()
+    return os.environ.get("GROK_API_KEY", "placeholder")
+
+
+def get_grok_client():
+    from openai import AsyncOpenAI
+    key = get_grok_key()
+    return AsyncOpenAI(api_key=key, base_url="https://api.x.ai/v1")
+
+
+async def grok_chat(
+    message: str,
+    system_prompt: str = "",
+    history: list | None = None,
+    max_tokens: int = 1024,
+    temperature: float = 0.5,
+    model: str = "grok-2-latest",
+) -> str:
+    """Send a chat message to Grok (xAI) and return the response text."""
+    try:
+        client = get_grok_client()
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        if history:
+            for msg in history[-20:]:
+                role = "assistant" if msg.get("role") in ("model", "assistant") else "user"
+                messages.append({"role": role, "content": msg.get("content", "")})
+        messages.append({"role": "user", "content": message})
+
+        response = await client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        return response.choices[0].message.content or ""
+    except Exception as e:
+        logger.error("Grok chat failed: %s", e)
+        return ""
+
+
+async def grok_chat_with_images(
+    prompt: str,
+    images: list[tuple[bytes, str]],
+    system_prompt: str = "",
+    max_tokens: int = 1024,
+    temperature: float = 0.3,
+    model: str = "grok-2-latest",
+) -> str:
+    """Send a message with images to Grok (xAI) and return the response text."""
+    try:
+        import base64
+        client = get_grok_client()
+        messages = []
+        content: list[dict] = [{"type": "text", "text": prompt}]
+        for image_bytes, mime_type in images:
+            b64 = base64.b64encode(image_bytes).decode("utf-8")
+            content.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:{mime_type};base64,{b64}"},
+            })
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": content})
+
+        response = await client.chat.completions.create(
+            model=model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        return response.choices[0].message.content or ""
+    except Exception as e:
+        logger.error("Grok vision chat failed: %s", e)
         return ""

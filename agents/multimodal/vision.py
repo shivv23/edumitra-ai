@@ -1,15 +1,12 @@
-"""Multimodal Agent — image analysis and text extraction via Gemini Vision.
+"""Multimodal Agent — image analysis and text extraction via Grok Vision (xAI).
 
 Security: never accepts user-supplied URLs; images are always server-side stored objects.
 """
 
-import asyncio
 import logging
-import base64
 from typing import Any, Dict, Optional
 
-from google.genai import types as genai_types
-from agents.llm import get_gemini_client
+from agents.llm import grok_chat_with_images
 
 logger = logging.getLogger(__name__)
 
@@ -35,34 +32,25 @@ async def analyze_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> Di
     logger.info("Analyzing image: %d bytes, type=%s", len(image_bytes), mime_type)
 
     try:
-        client = get_gemini_client()
-
-        img = genai_types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
-
-        response = await asyncio.to_thread(
-            client.models.generate_content,
-            model="gemini-2.5-flash",
-            contents=["Analyze this educational image. Extract all text and describe any diagrams.", img],
-            config=genai_types.GenerateContentConfig(
-                system_instruction=_VISION_SYSTEM_PROMPT,
-                max_output_tokens=1000,
-                temperature=0.3,
-            ),
+        full_text = await grok_chat_with_images(
+            prompt="Analyze this educational image. Extract all text and describe any diagrams.",
+            images=[(image_bytes, mime_type)],
+            system_prompt=_VISION_SYSTEM_PROMPT,
+            max_tokens=1000,
+            temperature=0.3,
+            model="grok-2-latest",
         )
+        if not full_text:
+            full_text = ""
 
-        full_text = response.text or ""
-
-        summary_response = await asyncio.to_thread(
-            client.models.generate_content,
-            model="gemini-2.5-flash",
-            contents=[f"Summarize this in 2-3 sentences:\n\n{full_text}"],
-            config=genai_types.GenerateContentConfig(
-                max_output_tokens=200,
-                temperature=0.2,
-            ),
+        summary = await grok_chat_with_images(
+            prompt=f"Summarize this in 2-3 sentences:\n\n{full_text}",
+            images=[],
+            max_tokens=200,
+            temperature=0.2,
+            model="grok-2-latest",
         )
-
-        summary = summary_response.text.strip() if summary_response.text else full_text[:200]
+        summary = summary.strip() if summary else full_text[:200]
 
         return {
             "analysis": full_text,
@@ -89,21 +77,14 @@ async def extract_text_from_image(image_bytes: bytes, mime_type: str = "image/jp
     logger.info("Extracting text from image: %d bytes", len(image_bytes))
 
     try:
-        client = get_gemini_client()
-
-        img = genai_types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
-
-        response = await asyncio.to_thread(
-            client.models.generate_content,
-            model="gemini-2.5-flash",
-            contents=["Extract all text from this image. Preserve the original language. Output only the extracted text.", img],
-            config=genai_types.GenerateContentConfig(
-                max_output_tokens=2000,
-                temperature=0.1,
-            ),
+        text = await grok_chat_with_images(
+            prompt="Extract all text from this image. Preserve the original language. Output only the extracted text.",
+            images=[(image_bytes, mime_type)],
+            max_tokens=2000,
+            temperature=0.1,
+            model="grok-2-latest",
         )
-
-        return response.text.strip() if response.text else None
+        return text.strip() if text else None
     except Exception as e:
         logger.error("Text extraction failed: %s", e)
         return None

@@ -1,6 +1,5 @@
 """API routes bridging frontend calls to agents and database."""
 
-import asyncio
 import io
 import json
 import logging
@@ -10,7 +9,6 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status as http_status
 from pydantic import BaseModel, Field
-from google.genai import types as genai_types
 
 from src.auth.dependencies import get_current_user_id
 from src.config.settings import settings
@@ -22,9 +20,9 @@ from src.db import (
 )
 from src.schemas.common import Language, StudyQuery
 try:
-    from agents.llm import get_gemini_client
+    from agents.llm import grok_chat
 except ImportError:
-    get_gemini_client = None
+    grok_chat = None
 
 logger = logging.getLogger(__name__)
 
@@ -93,39 +91,23 @@ _CHAT_SYSTEM_PROMPT = (
 )
 
 
-async def _gemini_chat(message: str, history: Optional[List[Dict[str, str]]] = None) -> str:
+async def _grok_chat(message: str, history: Optional[List[Dict[str, str]]] = None) -> str:
     try:
-        if get_gemini_client is None:
+        if grok_chat is None:
             raise ImportError("agents module not available")
-        client = get_gemini_client()
-        contents = []
-        if history:
-            for msg in history[-10:]:
-                role = "user" if msg.get("role") == "user" else "model"
-                contents.append({"role": role, "parts": [{"text": msg.get("content", "")}]})
-        contents.append({"role": "user", "parts": [{"text": message}]})
-
-        models_to_try = ["gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
-        last_error = None
-        for model in models_to_try:
-            try:
-                response = await asyncio.to_thread(
-                    client.models.generate_content,
-                    model=model,
-                    contents=contents,
-                    config=genai_types.GenerateContentConfig(
-                        system_instruction=_CHAT_SYSTEM_PROMPT,
-                        max_output_tokens=1024,
-                        temperature=0.5,
-                    ),
-                )
-                return response.text or "I'm thinking... Please ask again."
-            except Exception as e:
-                last_error = e
-                logger.warning("%s failed: %s", model, e)
-        raise last_error  # type: ignore[misc]
+        response = await grok_chat(
+            message=message,
+            system_prompt=_CHAT_SYSTEM_PROMPT,
+            history=history,
+            max_tokens=1024,
+            temperature=0.5,
+            model="grok-2-latest",
+        )
+        if response:
+            return response
+        return "I'm thinking... Please ask again."
     except Exception as e:
-        logger.error("Gemini chat failed: %s", e)
+        logger.error("Grok chat failed: %s", e)
         return (
             f"I understand you're asking about '{message[:60]}'. I'm having trouble connecting "
             f"to my knowledge engine. Please try again in a moment."
@@ -263,7 +245,7 @@ async def get_dashboard(user_id: str = Depends(get_current_user_id)):
 
 @router.post("/study/query", response_model=ChatResponse)
 async def study_query(req: ChatRequest, user_id: str = Depends(get_current_user_id)):
-    response = await _gemini_chat(req.message, req.history)
+    response = await _grok_chat(req.message, req.history)
     return ChatResponse(response=response, type="text")
 
 
@@ -285,11 +267,11 @@ async def langgraph_query(req: ChatRequest, user_id: str = Depends(get_current_u
         result = await supervisor_graph.ainvoke(initial_state)
         response = result.get("final_response", "")
         if not response:
-            response = await _gemini_chat(req.message, req.history)
+            response = await _grok_chat(req.message, req.history)
         return ChatResponse(response=response, type="text")
     except Exception as e:
         logger.warning("LangGraph supervisor failed, falling back: %s", e)
-        response = await _gemini_chat(req.message, req.history)
+        response = await _grok_chat(req.message, req.history)
         return ChatResponse(response=response, type="text")
 
 
@@ -347,7 +329,7 @@ async def study_voice(
                 response="I couldn't hear anything clearly. Please try speaking closer to the microphone or type your question.",
             )
 
-        response = await _gemini_chat(transcript)
+        response = await _grok_chat(transcript)
         return VoiceResponse(transcript=transcript, response=response)
     except Exception as e:
         logger.warning("voice processing failed: %s", e)
