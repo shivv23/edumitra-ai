@@ -89,7 +89,7 @@ def get_grok_key() -> str:
 def get_grok_client():
     from openai import AsyncOpenAI
     key = get_grok_key()
-    return AsyncOpenAI(api_key=key, base_url="https://api.x.ai/v1")
+    return AsyncOpenAI(api_key=key, base_url="https://api.groq.com/openai/v1")
 
 
 async def grok_chat(
@@ -98,9 +98,9 @@ async def grok_chat(
     history: list | None = None,
     max_tokens: int = 1024,
     temperature: float = 0.5,
-    model: str = "grok-2-latest",
+    model: str = "llama-3.3-70b-versatile",
 ) -> str:
-    """Send a chat message to Grok (xAI) and return the response text."""
+    """Send a chat message to Groq and return the response text."""
     try:
         client = get_grok_client()
         messages = []
@@ -120,7 +120,7 @@ async def grok_chat(
         )
         return response.choices[0].message.content or ""
     except Exception as e:
-        logger.error("Grok chat failed: %s", e)
+        logger.error("Groq chat failed: %s", e)
         return ""
 
 
@@ -130,9 +130,9 @@ async def grok_chat_with_images(
     system_prompt: str = "",
     max_tokens: int = 1024,
     temperature: float = 0.3,
-    model: str = "grok-2-latest",
+    model: str = "llama-3.3-70b-versatile",
 ) -> str:
-    """Send a message with images to Grok (xAI) and return the response text."""
+    """Send a message with images to Groq and return the response text."""
     try:
         import base64
         client = get_grok_client()

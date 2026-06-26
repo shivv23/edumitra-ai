@@ -101,7 +101,7 @@ async def _grok_chat(message: str, history: Optional[List[Dict[str, str]]] = Non
             history=history,
             max_tokens=1024,
             temperature=0.5,
-            model="grok-2-latest",
+            model="llama-3.3-70b-versatile",
         )
         if response:
             return response

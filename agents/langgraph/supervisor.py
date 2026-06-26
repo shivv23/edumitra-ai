@@ -92,7 +92,7 @@ async def curriculum_rag_agent(state: GraphState) -> GraphState:
             system_prompt=system_prompt,
             max_tokens=1024,
             temperature=0.5,
-            model="grok-2-latest",
+            model="llama-3.3-70b-versatile",
         )
         state["agent_outputs"]["curriculum_rag"] = {
             "agent_name": "curriculum_rag",

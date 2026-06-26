@@ -38,7 +38,7 @@ async def analyze_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> Di
             system_prompt=_VISION_SYSTEM_PROMPT,
             max_tokens=1000,
             temperature=0.3,
-            model="grok-2-latest",
+            model="llama-3.3-70b-versatile",
         )
         if not full_text:
             full_text = ""
@@ -48,7 +48,7 @@ async def analyze_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> Di
             images=[],
             max_tokens=200,
             temperature=0.2,
-            model="grok-2-latest",
+            model="llama-3.3-70b-versatile",
         )
         summary = summary.strip() if summary else full_text[:200]
 
@@ -82,7 +82,7 @@ async def extract_text_from_image(image_bytes: bytes, mime_type: str = "image/jp
             images=[(image_bytes, mime_type)],
             max_tokens=2000,
             temperature=0.1,
-            model="grok-2-latest",
+            model="llama-3.3-70b-versatile",
         )
         return text.strip() if text else None
     except Exception as e:

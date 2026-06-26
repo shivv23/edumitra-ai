@@ -121,7 +121,7 @@ async def generate_explanation(
             system_prompt=_EXPLANATION_SYSTEM_PROMPT,
             max_tokens=800,
             temperature=0.4,
-            model="grok-2-latest",
+            model="llama-3.3-70b-versatile",
         )
         if text:
             return {"explanation": ContentSafetyFilter.sanitize_output(text), "success": True}
@@ -170,7 +170,7 @@ async def generate_quiz(
                 system_prompt=_QUIZ_SYSTEM_PROMPT,
                 max_tokens=2000,
                 temperature=0.6,
-                model="grok-2-latest",
+                model="llama-3.3-70b-versatile",
             )
             text = text.strip()
 
@@ -222,7 +222,7 @@ async def generate_mind_map(topic: str, subject: str) -> Dict[str, Any]:
             system_prompt="You are an educational mind map generator. Output only valid JSON.",
             max_tokens=1500,
             temperature=0.4,
-            model="grok-2-latest",
+            model="llama-3.3-70b-versatile",
         )
         text = text.strip()
         text = re.sub(r"^```(?:json)?\s*", "", text)
