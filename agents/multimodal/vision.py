@@ -6,7 +6,7 @@ Security: never accepts user-supplied URLs; images are always server-side stored
 import logging
 from typing import Any, Dict, Optional
 
-from agents.llm import grok_chat_with_images
+from agents.llm import groq_chat_with_images
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ async def analyze_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> Di
     logger.info("Analyzing image: %d bytes, type=%s", len(image_bytes), mime_type)
 
     try:
-        full_text = await grok_chat_with_images(
+        full_text = await groq_chat_with_images(
             prompt="Analyze this educational image. Extract all text and describe any diagrams.",
             images=[(image_bytes, mime_type)],
             system_prompt=_VISION_SYSTEM_PROMPT,
@@ -43,7 +43,7 @@ async def analyze_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> Di
         if not full_text:
             full_text = ""
 
-        summary = await grok_chat_with_images(
+        summary = await groq_chat_with_images(
             prompt=f"Summarize this in 2-3 sentences:\n\n{full_text}",
             images=[],
             max_tokens=200,
@@ -77,7 +77,7 @@ async def extract_text_from_image(image_bytes: bytes, mime_type: str = "image/jp
     logger.info("Extracting text from image: %d bytes", len(image_bytes))
 
     try:
-        text = await grok_chat_with_images(
+        text = await groq_chat_with_images(
             prompt="Extract all text from this image. Preserve the original language. Output only the extracted text.",
             images=[(image_bytes, mime_type)],
             max_tokens=2000,

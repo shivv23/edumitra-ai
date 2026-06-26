@@ -68,7 +68,7 @@ async def curriculum_rag_agent(state: GraphState) -> GraphState:
         from agents.rag.retriever import retrieve_context, format_context_for_prompt
         from agents.rag.vector_store import seed_curriculum
         from agents.langgraph.sanitizer import build_safe_prompt
-        from agents.llm import grok_chat
+        from agents.llm import groq_chat
 
         await asyncio.to_thread(seed_curriculum)
 
@@ -87,7 +87,7 @@ async def curriculum_rag_agent(state: GraphState) -> GraphState:
         if context:
             system_prompt += f"\n\nRelevant curriculum context:\n{context}"
 
-        response = await grok_chat(
+        response = await groq_chat(
             message=prompt,
             system_prompt=system_prompt,
             max_tokens=1024,

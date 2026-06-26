@@ -10,7 +10,7 @@ import re
 from typing import Any, Dict, List, Optional
 from enum import Enum
 
-from agents.llm import grok_chat, claude_chat
+from agents.llm import groq_chat, claude_chat
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +116,7 @@ async def generate_explanation(
                 return {"explanation": ContentSafetyFilter.sanitize_output(text), "success": True}
             logger.info("Claude returned empty, falling back to Gemini")
 
-        text = await grok_chat(
+        text = await groq_chat(
             message=prompt,
             system_prompt=_EXPLANATION_SYSTEM_PROMPT,
             max_tokens=800,
@@ -165,7 +165,7 @@ async def generate_quiz(
             )
 
         if not text:
-            text = await grok_chat(
+            text = await groq_chat(
                 message=prompt,
                 system_prompt=_QUIZ_SYSTEM_PROMPT,
                 max_tokens=2000,
@@ -217,7 +217,7 @@ async def generate_mind_map(topic: str, subject: str) -> Dict[str, Any]:
             f"{{\"center\": str, \"branches\": [{{\"name\": str, \"children\": [str]}}]}}"
         )
 
-        text = await grok_chat(
+        text = await groq_chat(
             message=prompt,
             system_prompt="You are an educational mind map generator. Output only valid JSON.",
             max_tokens=1500,

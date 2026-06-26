@@ -1,7 +1,7 @@
 """Shared LLM client helpers for EduMitra agents.
 
 Loads API keys from environment or .env file once at import time.
-Supports Grok (xAI), Claude (Anthropic), and Gemini (Google).
+Supports Groq, Claude (Anthropic), and Gemini (Google).
 """
 
 import os
@@ -81,18 +81,18 @@ async def claude_chat(
         return ""
 
 
-def get_grok_key() -> str:
+def get_groq_key() -> str:
     _ensure_env()
     return os.environ.get("GROK_API_KEY", "placeholder")
 
 
-def get_grok_client():
+def get_groq_client():
     from openai import AsyncOpenAI
-    key = get_grok_key()
+    key = get_groq_key()
     return AsyncOpenAI(api_key=key, base_url="https://api.groq.com/openai/v1")
 
 
-async def grok_chat(
+async def groq_chat(
     message: str,
     system_prompt: str = "",
     history: list | None = None,
@@ -102,7 +102,7 @@ async def grok_chat(
 ) -> str:
     """Send a chat message to Groq and return the response text."""
     try:
-        client = get_grok_client()
+        client = get_groq_client()
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
@@ -124,7 +124,7 @@ async def grok_chat(
         return ""
 
 
-async def grok_chat_with_images(
+async def groq_chat_with_images(
     prompt: str,
     images: list[tuple[bytes, str]],
     system_prompt: str = "",
@@ -135,7 +135,7 @@ async def grok_chat_with_images(
     """Send a message with images to Groq and return the response text."""
     try:
         import base64
-        client = get_grok_client()
+        client = get_groq_client()
         messages = []
         content: list[dict] = [{"type": "text", "text": prompt}]
         for image_bytes, mime_type in images:

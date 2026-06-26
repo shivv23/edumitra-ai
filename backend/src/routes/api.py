@@ -20,9 +20,9 @@ from src.db import (
 )
 from src.schemas.common import Language, StudyQuery
 try:
-    from agents.llm import grok_chat
+    from agents.llm import groq_chat
 except ImportError:
-    grok_chat = None
+    groq_chat = None
 
 logger = logging.getLogger(__name__)
 
@@ -91,11 +91,11 @@ _CHAT_SYSTEM_PROMPT = (
 )
 
 
-async def _grok_chat(message: str, history: Optional[List[Dict[str, str]]] = None) -> str:
+async def _groq_chat(message: str, history: Optional[List[Dict[str, str]]] = None) -> str:
     try:
-        if grok_chat is None:
+        if groq_chat is None:
             raise ImportError("agents module not available")
-        response = await grok_chat(
+        response = await groq_chat(
             message=message,
             system_prompt=_CHAT_SYSTEM_PROMPT,
             history=history,
@@ -245,7 +245,7 @@ async def get_dashboard(user_id: str = Depends(get_current_user_id)):
 
 @router.post("/study/query", response_model=ChatResponse)
 async def study_query(req: ChatRequest, user_id: str = Depends(get_current_user_id)):
-    response = await _grok_chat(req.message, req.history)
+    response = await _groq_chat(req.message, req.history)
     return ChatResponse(response=response, type="text")
 
 
@@ -267,11 +267,11 @@ async def langgraph_query(req: ChatRequest, user_id: str = Depends(get_current_u
         result = await supervisor_graph.ainvoke(initial_state)
         response = result.get("final_response", "")
         if not response:
-            response = await _grok_chat(req.message, req.history)
+            response = await _groq_chat(req.message, req.history)
         return ChatResponse(response=response, type="text")
     except Exception as e:
         logger.warning("LangGraph supervisor failed, falling back: %s", e)
-        response = await _grok_chat(req.message, req.history)
+        response = await _groq_chat(req.message, req.history)
         return ChatResponse(response=response, type="text")
 
 
@@ -329,7 +329,7 @@ async def study_voice(
                 response="I couldn't hear anything clearly. Please try speaking closer to the microphone or type your question.",
             )
 
-        response = await _grok_chat(transcript)
+        response = await _groq_chat(transcript)
         return VoiceResponse(transcript=transcript, response=response)
     except Exception as e:
         logger.warning("voice processing failed: %s", e)
