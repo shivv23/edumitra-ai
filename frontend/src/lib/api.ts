@@ -25,7 +25,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers,
-    signal: AbortSignal.timeout(30000),
+    signal: AbortSignal.timeout(60000),
   });
 
   if (!res.ok) {
@@ -47,7 +47,7 @@ export const api = {
       method: "POST",
       body: formData,
       headers,
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(60000),
     }).then(async (res) => {
       if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
       return res.json() as T;

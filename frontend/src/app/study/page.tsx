@@ -11,6 +11,8 @@ import { SUPPORTED_LANGUAGES } from "@/types";
 import { setAuthToken } from "@/lib/api";
 import { getStoredToken, getStoredUser } from "@/lib/auth";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://edumitra-ai.onrender.com";
+
 export default function StudyPage() {
   const router = useRouter();
   const [showUpload, setShowUpload] = useState(false);
@@ -29,6 +31,13 @@ export default function StudyPage() {
     setUser({ name: user.name, role: user.role });
     setReady(true);
   }, [router]);
+
+  useEffect(() => {
+    const keepWarm = setInterval(() => {
+      fetch(`${API_BASE}/health`).catch(() => {});
+    }, 600000);
+    return () => clearInterval(keepWarm);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
